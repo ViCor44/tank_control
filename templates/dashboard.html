@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - tank_control{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+<p>Aplicação inicial para gestão de tanques e fontes.</p>
+<ul>
+  <li><strong>Modo do sistema:</strong> {{ system_mode }}</li>
+  <li><strong>Tanques configurados:</strong> {{ tank_count }}</li>
+  <li><strong>Fontes configuradas:</strong> {{ source_count }}</li>
+  <li><strong>Rotas configuradas:</strong> {{ route_count }}</li>
+</ul>
+{% endblock %}
