@@ -1,0 +1,218 @@
+{
+  "system": {
+    "decision_interval_seconds": 5,
+    "safe_mode_on_error": true,
+    "sensor_request_timeout_seconds": 2
+  },
+  "relay_board": {
+    "type": "waveshare_modbus_eth_relay_30ch",
+    "host": "192.168.1.50",
+    "port": 502,
+    "unit_id": 1
+  },
+  "tanks": [
+    {
+      "id": "T1",
+      "name": "Tanque 1",
+      "enabled": true,
+      "sensor": {
+        "type": "a02yyuw",
+        "controller": "esp32_t1",
+        "endpoint": "http://192.168.1.101/level",
+        "method": "GET",
+        "level_key": "level_percent"
+      },
+      "thresholds": {
+        "empty_percent": 15,
+        "full_percent": 90
+      },
+      "relays": {
+        "empty": 1,
+        "full": 2
+      }
+    },
+    {
+      "id": "T2",
+      "name": "Tanque 2",
+      "enabled": true,
+      "sensor": {
+        "type": "a02yyuw",
+        "controller": "esp32_t2",
+        "endpoint": "http://192.168.1.102/level",
+        "method": "GET",
+        "level_key": "level_percent"
+      },
+      "thresholds": {
+        "empty_percent": 15,
+        "full_percent": 90
+      },
+      "relays": {
+        "empty": 3,
+        "full": 4
+      }
+    },
+    {
+      "id": "T3",
+      "name": "Tanque 3",
+      "enabled": true,
+      "sensor": {
+        "type": "a02yyuw",
+        "controller": "esp32_t3",
+        "endpoint": "http://192.168.1.103/level",
+        "method": "GET",
+        "level_key": "level_percent"
+      },
+      "thresholds": {
+        "empty_percent": 15,
+        "full_percent": 90
+      },
+      "relays": {
+        "empty": 5,
+        "full": 6
+      }
+    },
+    {
+      "id": "T4",
+      "name": "Tanque 4",
+      "enabled": true,
+      "sensor": {
+        "type": "a02yyuw",
+        "controller": "esp32_t4",
+        "endpoint": "http://192.168.1.104/level",
+        "method": "GET",
+        "level_key": "level_percent"
+      },
+      "thresholds": {
+        "empty_percent": 15,
+        "full_percent": 90
+      },
+      "relays": {
+        "empty": 7,
+        "full": 8
+      }
+    },
+    {
+      "id": "T5",
+      "name": "Tanque 5",
+      "enabled": true,
+      "sensor": {
+        "type": "a02yyuw",
+        "controller": "esp32_t5",
+        "endpoint": "http://192.168.1.105/level",
+        "method": "GET",
+        "level_key": "level_percent"
+      },
+      "thresholds": {
+        "empty_percent": 15,
+        "full_percent": 90
+      },
+      "relays": {
+        "empty": 9,
+        "full": 10
+      }
+    }
+  ],
+  "sources": [
+    {
+      "id": "oi1",
+      "name": "Osmose 1",
+      "enabled": true,
+      "enable_relay": 11,
+      "mode": "sequence",
+      "repeat_sequence": true,
+      "sequence": [
+        { "tank_id": "T3", "enabled": true },
+        { "tank_id": "T4", "enabled": true },
+        { "tank_id": "T5", "enabled": true }
+      ]
+    },
+    {
+      "id": "oi2",
+      "name": "Osmose 2",
+      "enabled": true,
+      "enable_relay": 12,
+      "mode": "sequence",
+      "repeat_sequence": true,
+      "sequence": [
+        { "tank_id": "T1", "enabled": true },
+        { "tank_id": "T2", "enabled": true }
+      ]
+    },
+    {
+      "id": "rede",
+      "name": "Rede Pública",
+      "enabled": true,
+      "enable_relay": 13,
+      "mode": "sequence",
+      "repeat_sequence": true,
+      "sequence": [
+        { "tank_id": "T5", "enabled": true },
+        { "tank_id": "T2", "enabled": true },
+        { "tank_id": "T1", "enabled": true }
+      ]
+    }
+  ],
+  "routes": [
+    { "source_id": "oi1", "tank_id": "T1", "enabled": true, "valve_relay": 14 },
+    { "source_id": "oi1", "tank_id": "T2", "enabled": true, "valve_relay": 15 },
+    { "source_id": "oi1", "tank_id": "T3", "enabled": true, "valve_relay": 16 },
+    { "source_id": "oi1", "tank_id": "T4", "enabled": true, "valve_relay": 17 },
+    { "source_id": "oi1", "tank_id": "T5", "enabled": true, "valve_relay": 18 },
+
+    { "source_id": "oi2", "tank_id": "T1", "enabled": true, "valve_relay": 19 },
+    { "source_id": "oi2", "tank_id": "T2", "enabled": true, "valve_relay": 20 },
+    { "source_id": "oi2", "tank_id": "T3", "enabled": true, "valve_relay": 21 },
+    { "source_id": "oi2", "tank_id": "T4", "enabled": true, "valve_relay": 22 },
+    { "source_id": "oi2", "tank_id": "T5", "enabled": true, "valve_relay": 23 },
+
+    { "source_id": "rede", "tank_id": "T1", "enabled": true, "valve_relay": 24 },
+    { "source_id": "rede", "tank_id": "T2", "enabled": true, "valve_relay": 25 },
+    { "source_id": "rede", "tank_id": "T3", "enabled": true, "valve_relay": 26 },
+    { "source_id": "rede", "tank_id": "T4", "enabled": true, "valve_relay": 27 },
+    { "source_id": "rede", "tank_id": "T5", "enabled": true, "valve_relay": 28 }
+  ],
+  "rules": {
+    "allow_multiple_sources_per_tank": false,
+    "allow_multiple_tanks_per_source": false,
+    "skip_disabled_tanks": true,
+    "skip_full_tanks": true,
+    "prioritize_empty_tanks": true
+  },
+  "relay_map": [
+    { "relay": 1, "name": "T1_EMPTY" },
+    { "relay": 2, "name": "T1_FULL" },
+    { "relay": 3, "name": "T2_EMPTY" },
+    { "relay": 4, "name": "T2_FULL" },
+    { "relay": 5, "name": "T3_EMPTY" },
+    { "relay": 6, "name": "T3_FULL" },
+    { "relay": 7, "name": "T4_EMPTY" },
+    { "relay": 8, "name": "T4_FULL" },
+    { "relay": 9, "name": "T5_EMPTY" },
+    { "relay": 10, "name": "T5_FULL" },
+
+    { "relay": 11, "name": "OI1_ENABLE" },
+    { "relay": 12, "name": "OI2_ENABLE" },
+    { "relay": 13, "name": "REDE_ENABLE" },
+
+    { "relay": 14, "name": "OI1_TO_T1" },
+    { "relay": 15, "name": "OI1_TO_T2" },
+    { "relay": 16, "name": "OI1_TO_T3" },
+    { "relay": 17, "name": "OI1_TO_T4" },
+    { "relay": 18, "name": "OI1_TO_T5" },
+
+    { "relay": 19, "name": "OI2_TO_T1" },
+    { "relay": 20, "name": "OI2_TO_T2" },
+    { "relay": 21, "name": "OI2_TO_T3" },
+    { "relay": 22, "name": "OI2_TO_T4" },
+    { "relay": 23, "name": "OI2_TO_T5" },
+
+    { "relay": 24, "name": "REDE_TO_T1" },
+    { "relay": 25, "name": "REDE_TO_T2" },
+    { "relay": 26, "name": "REDE_TO_T3" },
+    { "relay": 27, "name": "REDE_TO_T4" },
+    { "relay": 28, "name": "REDE_TO_T5" },
+
+    { "relay": 29, "name": "RESERVED_1" },
+    { "relay": 30, "name": "RESERVED_2" }
+  ]
+}
