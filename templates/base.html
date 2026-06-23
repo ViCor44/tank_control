@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}tank_control{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body>
+  <aside class="sidebar">
+    <h1>tank_control</h1>
+    <nav>
+      <a href="/">Dashboard</a>
+      <a href="/tanks">Tanques</a>
+      <a href="/sources">Fontes</a>
+      <a href="/rules">Regras</a>
+      <a href="/settings">Configuração</a>
+    </nav>
+  </aside>
+
+  <main class="content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
