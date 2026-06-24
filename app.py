@@ -1,17 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 
 from services.config_service import load_config, load_state, save_config
-from services.tank_service import get_tank_sensor_reading
-
-
-def tank_status_from_percent(level_percent, empty_percent, full_percent):
-    if level_percent <= empty_percent:
-        return "critical_low"
-    if level_percent < 30:
-        return "low"
-    if level_percent >= full_percent:
-        return "full"
-    return "normal"
 
 
 def enrich_tanks(tanks, tank_states):
@@ -21,7 +10,7 @@ def enrich_tanks(tanks, tank_states):
         state = tank_states.get(tank["id"], {})
         calibration = tank.get("calibration", {})
 
-        enriched_tank = {
+        enriched.append({
             **tank,
             "capacity_liters": tank.get("capacity_liters", 0),
             "calibration": {
@@ -30,29 +19,10 @@ def enrich_tanks(tanks, tank_states):
             },
             "level_percent": state.get("level_percent", 0),
             "status": state.get("status", "unknown"),
-            "distance_cm": None,
-            "volume_liters": None,
-            "sensor_ok": False,
-        }
-
-        if tank.get("enabled"):
-            reading = get_tank_sensor_reading(tank)
-
-            if reading.get("ok"):
-                level_percent = reading["level_percent"]
-                status = tank_status_from_percent(
-                    level_percent,
-                    tank["thresholds"]["empty_percent"],
-                    tank["thresholds"]["full_percent"]
-                )
-
-                enriched_tank["level_percent"] = level_percent
-                enriched_tank["distance_cm"] = reading["distance_cm"]
-                enriched_tank["volume_liters"] = reading["volume_liters"]
-                enriched_tank["status"] = status
-                enriched_tank["sensor_ok"] = True
-
-        enriched.append(enriched_tank)
+            "distance_cm": state.get("distance_cm"),
+            "volume_liters": state.get("volume_liters"),
+            "sensor_ok": state.get("sensor_ok", False),
+        })
 
     return enriched
 
@@ -83,14 +53,8 @@ def create_app():
         config = load_config()
         state = load_state()
 
-        tanks = enrich_tanks(
-            config.get("tanks", []),
-            state.get("tanks", {})
-        )
-        sources = enrich_sources(
-            config.get("sources", []),
-            state.get("sources", {})
-        )
+        tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
+        sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
         routes = config.get("routes", [])
         alarms = state.get("alarms", [])
 
@@ -111,11 +75,7 @@ def create_app():
         config = load_config()
         state = load_state()
 
-        tanks = enrich_tanks(
-            config.get("tanks", []),
-            state.get("tanks", {})
-        )
-
+        tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
         return render_template("tanks.html", tanks=tanks)
 
     @app.route("/tanks/<tank_id>/edit", methods=["GET", "POST"])
@@ -140,21 +100,17 @@ def create_app():
             tank["name"] = request.form.get("name", "").strip()
             tank["enabled"] = request.form.get("enabled") == "on"
             tank["capacity_liters"] = int(request.form.get("capacity_liters", 0))
-
             tank["calibration"] = {
                 "distance_empty_cm": int(request.form.get("distance_empty_cm", 0)),
                 "distance_full_cm": int(request.form.get("distance_full_cm", 0)),
             }
-
             tank["sensor"]["type"] = request.form.get("sensor_type", "").strip()
             tank["sensor"]["controller"] = request.form.get("sensor_controller", "").strip()
             tank["sensor"]["endpoint"] = request.form.get("sensor_endpoint", "").strip()
             tank["sensor"]["method"] = request.form.get("sensor_method", "GET").strip()
             tank["sensor"]["level_key"] = request.form.get("sensor_level_key", "").strip()
-
             tank["thresholds"]["empty_percent"] = int(request.form.get("empty_percent", 0))
             tank["thresholds"]["full_percent"] = int(request.form.get("full_percent", 0))
-
             tank["relays"]["empty"] = int(request.form.get("relay_empty", 0))
             tank["relays"]["full"] = int(request.form.get("relay_full", 0))
 
@@ -168,11 +124,7 @@ def create_app():
         config = load_config()
         state = load_state()
 
-        sources = enrich_sources(
-            config.get("sources", []),
-            state.get("sources", {})
-        )
-
+        sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
         return render_template("sources.html", sources=sources)
 
     @app.route("/rules")
