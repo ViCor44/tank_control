@@ -13,17 +13,17 @@
   "tanks": [
     {
       "id": "T1",
-      "name": "Tanque 1",
+      "name": "Tanque 1 (Backwash)",
       "enabled": true,
-      "capacity_liters": 1000,
+      "capacity_liters": 300000,
       "calibration": {
-        "distance_empty_cm": 150,
-        "distance_full_cm": 20
+        "distance_empty_cm": 270,
+        "distance_full_cm": 35
       },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t1",
-        "endpoint": "http://192.168.1.101/level",
+        "endpoint": "http://192.168.63.141/distance",
         "method": "GET",
         "level_key": "distance_cm"
       },
