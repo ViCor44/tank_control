@@ -9,10 +9,13 @@ def enrich_tanks(tanks, tank_states):
     for tank in tanks:
         state = tank_states.get(tank["id"], {})
         calibration = tank.get("calibration", {})
+        volume_liters = state.get("volume_liters")
+        volume_m3 = round(volume_liters / 1000, 2) if volume_liters is not None else None
 
         enriched.append({
             **tank,
             "capacity_liters": tank.get("capacity_liters", 0),
+            "capacity_m3": round(tank.get("capacity_liters", 0) / 1000, 2),
             "calibration": {
                 "distance_empty_cm": calibration.get("distance_empty_cm", 150),
                 "distance_full_cm": calibration.get("distance_full_cm", 20),
@@ -20,7 +23,8 @@ def enrich_tanks(tanks, tank_states):
             "level_percent": state.get("level_percent", 0),
             "status": state.get("status", "unknown"),
             "distance_cm": state.get("distance_cm"),
-            "volume_liters": state.get("volume_liters"),
+            "volume_liters": volume_liters,
+            "volume_m3": volume_m3,
             "sensor_ok": state.get("sensor_ok", False),
         })
 
@@ -84,7 +88,7 @@ def create_app():
         state = load_state()
 
         tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
-        return render_template("tanks.html", tanks=tanks)
+        return render_template("tanks.html", tanks=tanks, tank_count=len(tanks))
 
     @app.route("/tanks/<tank_id>/edit", methods=["GET", "POST"])
     def edit_tank(tank_id):

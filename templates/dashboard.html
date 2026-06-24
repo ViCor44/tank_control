@@ -60,7 +60,7 @@
         <div class="tank-meta">
           <div class="tank-percent" id="tank-percent-{{ tank.id }}">{{ tank.level_percent }}%</div>
           <p><strong>ID:</strong> {{ tank.id }}</p>
-          <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_liters if tank.volume_liters is not none else '-' }}</span> L</p>
+          <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> m³</p>
           <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
           <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
         </div>
@@ -116,7 +116,7 @@ function updateDashboard(data) {
     const fillEl = document.getElementById(`tank-fill-${tank.id}`);
 
     if (percentEl) percentEl.textContent = `${tank.level_percent}%`;
-    if (volumeEl) volumeEl.textContent = tank.volume_liters ?? "-";
+    if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
     if (distanceEl) distanceEl.textContent = tank.distance_cm ?? "-";
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);

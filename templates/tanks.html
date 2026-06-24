@@ -5,27 +5,28 @@
 {% block content %}
 <div class="page-header">
   <h2>Tanques</h2>
-  <span class="badge badge-blue">{{ tanks|length }} configurados</span>
+  <span class="badge badge-blue" id="tank-page-count">{{ tank_count }} configurados</span>
 </div>
 
 <div class="card-grid">
   {% for tank in tanks %}
-  <div class="scada-card">
+  <div class="scada-card" id="tank-card-{{ tank.id }}">
     <div class="card-top">
       <h4>{{ tank.name }}</h4>
-      <span class="badge badge-status-{{ tank.status }}">{{ tank.status }}</span>
+      <span class="badge badge-status-{{ tank.status }}" id="tank-status-{{ tank.id }}">{{ tank.status }}</span>
     </div>
 
     <div class="tank-level">
       <div class="tank-bar">
-        <div class="tank-fill status-{{ tank.status }}" style="height: {{ tank.level_percent }}%;"></div>
+        <div class="tank-fill status-{{ tank.status }}" id="tank-fill-{{ tank.id }}" style="height: {{ tank.level_percent }}%;"></div>
       </div>
+
       <div class="tank-meta">
-        <div class="tank-percent">{{ tank.level_percent }}%</div>
+        <div class="tank-percent" id="tank-percent-{{ tank.id }}">{{ tank.level_percent }}%</div>
         <p><strong>ID:</strong> {{ tank.id }}</p>
-        <p><strong>Capacidade:</strong> {{ tank.capacity_liters or 0 }} L</p>
-        <p><strong>Volume atual:</strong> {{ tank.volume_liters if tank.volume_liters is not none else '-' }} L</p>
-        <p><strong>Distância atual:</strong> {{ tank.distance_cm if tank.distance_cm is not none else '-' }} cm</p>
+        <p><strong>Capacidade:</strong> {{ tank.capacity_m3 }} m³</p>
+        <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> m³</p>
+        <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
         <p><strong>Distância vazio:</strong> {{ tank.calibration.distance_empty_cm if tank.calibration else '-' }} cm</p>
         <p><strong>Distância cheio:</strong> {{ tank.calibration.distance_full_cm if tank.calibration else '-' }} cm</p>
         <p><strong>Sensor:</strong> {{ tank.sensor.type }}</p>
@@ -35,7 +36,7 @@
         <p><strong>Threshold cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
         <p><strong>Relé vazio:</strong> {{ tank.relays.empty }}</p>
         <p><strong>Relé cheio:</strong> {{ tank.relays.full }}</p>
-        <p><strong>Sensor online:</strong> {{ "Sim" if tank.sensor_ok else "Não" }}</p>
+        <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
         <p>
           <a class="action-button" href="{{ url_for('edit_tank', tank_id=tank.id) }}">Editar</a>
         </p>
@@ -44,4 +45,53 @@
   </div>
   {% endfor %}
 </div>
+
+<script>
+function updateBadgeStatus(element, status) {
+  element.className = "badge badge-status-" + status;
+  element.textContent = status;
+}
+
+function updateTankFill(element, status, percent) {
+  element.className = "tank-fill status-" + status;
+  element.style.height = percent + "%";
+}
+
+function updateTanksPage(data) {
+  const countEl = document.getElementById("tank-page-count");
+  if (countEl) {
+    countEl.textContent = `${data.tank_count} configurados`;
+  }
+
+  data.tanks.forEach(tank => {
+    const percentEl = document.getElementById(`tank-percent-${tank.id}`);
+    const volumeEl = document.getElementById(`tank-volume-${tank.id}`);
+    const distanceEl = document.getElementById(`tank-distance-${tank.id}`);
+    const sensorOkEl = document.getElementById(`tank-sensor-ok-${tank.id}`);
+    const statusEl = document.getElementById(`tank-status-${tank.id}`);
+    const fillEl = document.getElementById(`tank-fill-${tank.id}`);
+
+    if (percentEl) percentEl.textContent = `${tank.level_percent}%`;
+    if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
+    if (distanceEl) distanceEl.textContent = tank.distance_cm ?? "-";
+    if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
+    if (statusEl) updateBadgeStatus(statusEl, tank.status);
+    if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
+  });
+}
+
+async function fetchTankState() {
+  try {
+    const response = await fetch("/api/state");
+    if (!response.ok) return;
+
+    const data = await response.json();
+    updateTanksPage(data);
+  } catch (error) {
+    console.error("Erro ao atualizar tanques:", error);
+  }
+}
+
+setInterval(fetchTankState, 20000);
+</script>
 {% endblock %}
