@@ -31,13 +31,13 @@
         <p><strong>Threshold cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
         <p><strong>Relé vazio:</strong> {{ tank.relays.empty }}</p>
         <p><strong>Relé cheio:</strong> {{ tank.relays.full }}</p>
-        <p>
-          <a class="action-button" href="{{ url_for('edit_tank', tank_id=tank.id) }}">Editar</a>
-        </p>
         <p><strong>Capacidade:</strong> {{ tank.capacity_liters or 0 }} L</p>
         <p><strong>Distância vazio:</strong> {{ tank.calibration.distance_empty_cm if tank.calibration else '-' }} cm</p>
         <p><strong>Distância cheio:</strong> {{ tank.calibration.distance_full_cm if tank.calibration else '-' }} cm</p>      </div>
-    </div>
+        <p>
+          <a class="action-button" href="{{ url_for('edit_tank', tank_id=tank.id) }}">Editar</a>
+        </p>
+      </div>
   </div>
   {% endfor %}
 </div>
