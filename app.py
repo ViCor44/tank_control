@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from services.config_service import load_config, load_state, save_config
 
@@ -45,30 +45,38 @@ def get_tank_by_id(tanks, tank_id):
     return next((tank for tank in tanks if tank["id"] == tank_id), None)
 
 
+def build_dashboard_data():
+    config = load_config()
+    state = load_state()
+
+    tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
+    sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
+    routes = config.get("routes", [])
+    alarms = state.get("alarms", [])
+
+    return {
+        "tank_count": len(tanks),
+        "source_count": len(sources),
+        "route_count": len(routes),
+        "system_mode": state.get("system_mode", "unknown"),
+        "tanks": tanks,
+        "sources": sources,
+        "routes": routes,
+        "alarms": alarms,
+    }
+
+
 def create_app():
     app = Flask(__name__)
 
     @app.route("/")
     def index():
-        config = load_config()
-        state = load_state()
+        data = build_dashboard_data()
+        return render_template("dashboard.html", **data)
 
-        tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
-        sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
-        routes = config.get("routes", [])
-        alarms = state.get("alarms", [])
-
-        return render_template(
-            "dashboard.html",
-            tank_count=len(tanks),
-            source_count=len(sources),
-            route_count=len(routes),
-            system_mode=state.get("system_mode", "unknown"),
-            tanks=tanks,
-            sources=sources,
-            routes=routes,
-            alarms=alarms,
-        )
+    @app.route("/api/state")
+    def api_state():
+        return jsonify(build_dashboard_data())
 
     @app.route("/tanks")
     def tanks_page():
