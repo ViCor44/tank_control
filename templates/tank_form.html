@@ -29,12 +29,24 @@
 
     <div class="form-group">
       <label for="distance_empty_cm">Distância sensor com tanque vazio (cm)</label>
-      <input id="distance_empty_cm" type="number" name="distance_empty_cm" value="{{ tank.calibration.distance_empty_cm if tank.calibration else 150 }}" required>
+      <input
+        id="distance_empty_cm"
+        type="number"
+        name="distance_empty_cm"
+        value="{{ tank.calibration.distance_empty_cm if tank.calibration else 150 }}"
+        required
+      >
     </div>
 
     <div class="form-group">
       <label for="distance_full_cm">Distância sensor com tanque cheio (cm)</label>
-      <input id="distance_full_cm" type="number" name="distance_full_cm" value="{{ tank.calibration.distance_full_cm if tank.calibration else 20 }}" required>
+      <input
+        id="distance_full_cm"
+        type="number"
+        name="distance_full_cm"
+        value="{{ tank.calibration.distance_full_cm if tank.calibration else 20 }}"
+        required
+      >
     </div>
 
     <div class="form-group">
