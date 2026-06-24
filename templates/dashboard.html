@@ -3,12 +3,68 @@
 {% block title %}Dashboard - tank_control{% endblock %}
 
 {% block content %}
-<h2>Dashboard</h2>
-<p>Aplicação inicial para gestão de tanques e fontes.</p>
-<ul>
-  <li><strong>Modo do sistema:</strong> {{ system_mode }}</li>
-  <li><strong>Tanques configurados:</strong> {{ tank_count }}</li>
-  <li><strong>Fontes configuradas:</strong> {{ source_count }}</li>
-  <li><strong>Rotas configuradas:</strong> {{ route_count }}</li>
-</ul>
+<div class="page-header">
+  <h2>Dashboard</h2>
+  <span class="badge badge-blue">{{ system_mode }}</span>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card">
+    <span class="stat-label">Tanques</span>
+    <span class="stat-value">{{ tank_count }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Fontes</span>
+    <span class="stat-value">{{ source_count }}</span>
+  </div>
+  <div class="stat-card">
+    <span class="stat-label">Rotas</span>
+    <span class="stat-value">{{ route_count }}</span>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Tanques configurados</h3>
+  <div class="card-grid">
+    {% for tank in tanks %}
+    <div class="scada-card">
+      <div class="card-top">
+        <h4>{{ tank.name }}</h4>
+        {% if tank.enabled %}
+          <span class="badge badge-green">Ativo</span>
+        {% else %}
+          <span class="badge badge-red">Desativado</span>
+        {% endif %}
+      </div>
+      <p><strong>ID:</strong> {{ tank.id }}</p>
+      <p><strong>Sensor:</strong> {{ tank.sensor.controller }}</p>
+      <p><strong>Endpoint:</strong> {{ tank.sensor.endpoint }}</p>
+      <p><strong>Vazio:</strong> {{ tank.thresholds.empty_percent }}%</p>
+      <p><strong>Cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Fontes configuradas</h3>
+  <div class="card-grid">
+    {% for source in sources %}
+    <div class="scada-card">
+      <div class="card-top">
+        <h4>{{ source.name }}</h4>
+        {% if source.enabled %}
+          <span class="badge badge-green">Ativa</span>
+        {% else %}
+          <span class="badge badge-red">Desativada</span>
+        {% endif %}
+      </div>
+      <p><strong>ID:</strong> {{ source.id }}</p>
+      <p><strong>Relé enable:</strong> {{ source.enable_relay }}</p>
+      <p><strong>Modo:</strong> {{ source.mode }}</p>
+      <p><strong>Sequência:</strong> {{ source.sequence | length }} tanque(s)</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
 {% endblock %}

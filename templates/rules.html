@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Regras - tank_control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Regras</h2>
+  <span class="badge badge-blue">Motor lógico</span>
+</div>
+
+<div class="panel">
+  <div class="card-grid">
+    {% for key, value in rules.items() %}
+    <div class="scada-card">
+      <div class="card-top">
+        <h4>{{ key }}</h4>
+        {% if value %}
+          <span class="badge badge-green">true</span>
+        {% else %}
+          <span class="badge badge-red">false</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

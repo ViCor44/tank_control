@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Fontes - tank_control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Fontes</h2>
+  <span class="badge badge-blue">{{ sources|length }} configuradas</span>
+</div>
+
+<div class="card-grid">
+  {% for source in sources %}
+  <div class="scada-card">
+    <div class="card-top">
+      <h4>{{ source.name }}</h4>
+      {% if source.enabled %}
+        <span class="badge badge-green">Ativa</span>
+      {% else %}
+        <span class="badge badge-red">Desativada</span>
+      {% endif %}
+    </div>
+    <p><strong>ID:</strong> {{ source.id }}</p>
+    <p><strong>Relé enable:</strong> {{ source.enable_relay }}</p>
+    <p><strong>Modo:</strong> {{ source.mode }}</p>
+    <p><strong>Sequência:</strong></p>
+    <ul>
+      {% for item in source.sequence %}
+      <li>{{ item.tank_id }}{% if not item.enabled %} (off){% endif %}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

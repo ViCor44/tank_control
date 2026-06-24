@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Configuração - tank_control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>Configuração</h2>
+  <span class="badge badge-blue">Sistema</span>
+</div>
+
+<div class="panel">
+  <h3>System</h3>
+  <div class="card-grid">
+    {% for key, value in system.items() %}
+    <div class="scada-card">
+      <p><strong>{{ key }}:</strong> {{ value }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Relay Board</h3>
+  <div class="card-grid">
+    {% for key, value in relay_board.items() %}
+    <div class="scada-card">
+      <p><strong>{{ key }}:</strong> {{ value }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
