@@ -15,12 +15,17 @@
       "id": "T1",
       "name": "Tanque 1",
       "enabled": true,
+      "capacity_liters": 1000,
+      "calibration": {
+        "distance_empty_cm": 150,
+        "distance_full_cm": 20
+      },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t1",
         "endpoint": "http://192.168.1.101/level",
         "method": "GET",
-        "level_key": "level_percent"
+        "level_key": "distance_cm"
       },
       "thresholds": {
         "empty_percent": 15,
@@ -35,12 +40,17 @@
       "id": "T2",
       "name": "Tanque 2",
       "enabled": true,
+      "capacity_liters": 1000,
+      "calibration": {
+        "distance_empty_cm": 150,
+        "distance_full_cm": 20
+      },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t2",
         "endpoint": "http://192.168.1.102/level",
         "method": "GET",
-        "level_key": "level_percent"
+        "level_key": "distance_cm"
       },
       "thresholds": {
         "empty_percent": 15,
@@ -55,12 +65,17 @@
       "id": "T3",
       "name": "Tanque 3",
       "enabled": true,
+      "capacity_liters": 1000,
+      "calibration": {
+        "distance_empty_cm": 150,
+        "distance_full_cm": 20
+      },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t3",
         "endpoint": "http://192.168.1.103/level",
         "method": "GET",
-        "level_key": "level_percent"
+        "level_key": "distance_cm"
       },
       "thresholds": {
         "empty_percent": 15,
@@ -75,12 +90,17 @@
       "id": "T4",
       "name": "Tanque 4",
       "enabled": true,
+      "capacity_liters": 1000,
+      "calibration": {
+        "distance_empty_cm": 150,
+        "distance_full_cm": 20
+      },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t4",
         "endpoint": "http://192.168.1.104/level",
         "method": "GET",
-        "level_key": "level_percent"
+        "level_key": "distance_cm"
       },
       "thresholds": {
         "empty_percent": 15,
@@ -95,12 +115,17 @@
       "id": "T5",
       "name": "Tanque 5",
       "enabled": true,
+      "capacity_liters": 1000,
+      "calibration": {
+        "distance_empty_cm": 150,
+        "distance_full_cm": 20
+      },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t5",
         "endpoint": "http://192.168.1.105/level",
         "method": "GET",
-        "level_key": "level_percent"
+        "level_key": "distance_cm"
       },
       "thresholds": {
         "empty_percent": 15,
@@ -121,9 +146,18 @@
       "mode": "sequence",
       "repeat_sequence": true,
       "sequence": [
-        { "tank_id": "T3", "enabled": true },
-        { "tank_id": "T4", "enabled": true },
-        { "tank_id": "T5", "enabled": true }
+        {
+          "tank_id": "T3",
+          "enabled": true
+        },
+        {
+          "tank_id": "T4",
+          "enabled": true
+        },
+        {
+          "tank_id": "T5",
+          "enabled": true
+        }
       ]
     },
     {
@@ -134,8 +168,14 @@
       "mode": "sequence",
       "repeat_sequence": true,
       "sequence": [
-        { "tank_id": "T1", "enabled": true },
-        { "tank_id": "T2", "enabled": true }
+        {
+          "tank_id": "T1",
+          "enabled": true
+        },
+        {
+          "tank_id": "T2",
+          "enabled": true
+        }
       ]
     },
     {
@@ -146,30 +186,112 @@
       "mode": "sequence",
       "repeat_sequence": true,
       "sequence": [
-        { "tank_id": "T5", "enabled": true },
-        { "tank_id": "T2", "enabled": true },
-        { "tank_id": "T1", "enabled": true }
+        {
+          "tank_id": "T5",
+          "enabled": true
+        },
+        {
+          "tank_id": "T2",
+          "enabled": true
+        },
+        {
+          "tank_id": "T1",
+          "enabled": true
+        }
       ]
     }
   ],
   "routes": [
-    { "source_id": "oi1", "tank_id": "T1", "enabled": true, "valve_relay": 14 },
-    { "source_id": "oi1", "tank_id": "T2", "enabled": true, "valve_relay": 15 },
-    { "source_id": "oi1", "tank_id": "T3", "enabled": true, "valve_relay": 16 },
-    { "source_id": "oi1", "tank_id": "T4", "enabled": true, "valve_relay": 17 },
-    { "source_id": "oi1", "tank_id": "T5", "enabled": true, "valve_relay": 18 },
-
-    { "source_id": "oi2", "tank_id": "T1", "enabled": true, "valve_relay": 19 },
-    { "source_id": "oi2", "tank_id": "T2", "enabled": true, "valve_relay": 20 },
-    { "source_id": "oi2", "tank_id": "T3", "enabled": true, "valve_relay": 21 },
-    { "source_id": "oi2", "tank_id": "T4", "enabled": true, "valve_relay": 22 },
-    { "source_id": "oi2", "tank_id": "T5", "enabled": true, "valve_relay": 23 },
-
-    { "source_id": "rede", "tank_id": "T1", "enabled": true, "valve_relay": 24 },
-    { "source_id": "rede", "tank_id": "T2", "enabled": true, "valve_relay": 25 },
-    { "source_id": "rede", "tank_id": "T3", "enabled": true, "valve_relay": 26 },
-    { "source_id": "rede", "tank_id": "T4", "enabled": true, "valve_relay": 27 },
-    { "source_id": "rede", "tank_id": "T5", "enabled": true, "valve_relay": 28 }
+    {
+      "source_id": "oi1",
+      "tank_id": "T1",
+      "enabled": true,
+      "valve_relay": 14
+    },
+    {
+      "source_id": "oi1",
+      "tank_id": "T2",
+      "enabled": true,
+      "valve_relay": 15
+    },
+    {
+      "source_id": "oi1",
+      "tank_id": "T3",
+      "enabled": true,
+      "valve_relay": 16
+    },
+    {
+      "source_id": "oi1",
+      "tank_id": "T4",
+      "enabled": true,
+      "valve_relay": 17
+    },
+    {
+      "source_id": "oi1",
+      "tank_id": "T5",
+      "enabled": true,
+      "valve_relay": 18
+    },
+    {
+      "source_id": "oi2",
+      "tank_id": "T1",
+      "enabled": true,
+      "valve_relay": 19
+    },
+    {
+      "source_id": "oi2",
+      "tank_id": "T2",
+      "enabled": true,
+      "valve_relay": 20
+    },
+    {
+      "source_id": "oi2",
+      "tank_id": "T3",
+      "enabled": true,
+      "valve_relay": 21
+    },
+    {
+      "source_id": "oi2",
+      "tank_id": "T4",
+      "enabled": true,
+      "valve_relay": 22
+    },
+    {
+      "source_id": "oi2",
+      "tank_id": "T5",
+      "enabled": true,
+      "valve_relay": 23
+    },
+    {
+      "source_id": "rede",
+      "tank_id": "T1",
+      "enabled": true,
+      "valve_relay": 24
+    },
+    {
+      "source_id": "rede",
+      "tank_id": "T2",
+      "enabled": true,
+      "valve_relay": 25
+    },
+    {
+      "source_id": "rede",
+      "tank_id": "T3",
+      "enabled": true,
+      "valve_relay": 26
+    },
+    {
+      "source_id": "rede",
+      "tank_id": "T4",
+      "enabled": true,
+      "valve_relay": 27
+    },
+    {
+      "source_id": "rede",
+      "tank_id": "T5",
+      "enabled": true,
+      "valve_relay": 28
+    }
   ],
   "rules": {
     "allow_multiple_sources_per_tank": false,
@@ -179,40 +301,125 @@
     "prioritize_empty_tanks": true
   },
   "relay_map": [
-    { "relay": 1, "name": "T1_EMPTY" },
-    { "relay": 2, "name": "T1_FULL" },
-    { "relay": 3, "name": "T2_EMPTY" },
-    { "relay": 4, "name": "T2_FULL" },
-    { "relay": 5, "name": "T3_EMPTY" },
-    { "relay": 6, "name": "T3_FULL" },
-    { "relay": 7, "name": "T4_EMPTY" },
-    { "relay": 8, "name": "T4_FULL" },
-    { "relay": 9, "name": "T5_EMPTY" },
-    { "relay": 10, "name": "T5_FULL" },
-
-    { "relay": 11, "name": "OI1_ENABLE" },
-    { "relay": 12, "name": "OI2_ENABLE" },
-    { "relay": 13, "name": "REDE_ENABLE" },
-
-    { "relay": 14, "name": "OI1_TO_T1" },
-    { "relay": 15, "name": "OI1_TO_T2" },
-    { "relay": 16, "name": "OI1_TO_T3" },
-    { "relay": 17, "name": "OI1_TO_T4" },
-    { "relay": 18, "name": "OI1_TO_T5" },
-
-    { "relay": 19, "name": "OI2_TO_T1" },
-    { "relay": 20, "name": "OI2_TO_T2" },
-    { "relay": 21, "name": "OI2_TO_T3" },
-    { "relay": 22, "name": "OI2_TO_T4" },
-    { "relay": 23, "name": "OI2_TO_T5" },
-
-    { "relay": 24, "name": "REDE_TO_T1" },
-    { "relay": 25, "name": "REDE_TO_T2" },
-    { "relay": 26, "name": "REDE_TO_T3" },
-    { "relay": 27, "name": "REDE_TO_T4" },
-    { "relay": 28, "name": "REDE_TO_T5" },
-
-    { "relay": 29, "name": "RESERVED_1" },
-    { "relay": 30, "name": "RESERVED_2" }
+    {
+      "relay": 1,
+      "name": "T1_EMPTY"
+    },
+    {
+      "relay": 2,
+      "name": "T1_FULL"
+    },
+    {
+      "relay": 3,
+      "name": "T2_EMPTY"
+    },
+    {
+      "relay": 4,
+      "name": "T2_FULL"
+    },
+    {
+      "relay": 5,
+      "name": "T3_EMPTY"
+    },
+    {
+      "relay": 6,
+      "name": "T3_FULL"
+    },
+    {
+      "relay": 7,
+      "name": "T4_EMPTY"
+    },
+    {
+      "relay": 8,
+      "name": "T4_FULL"
+    },
+    {
+      "relay": 9,
+      "name": "T5_EMPTY"
+    },
+    {
+      "relay": 10,
+      "name": "T5_FULL"
+    },
+    {
+      "relay": 11,
+      "name": "OI1_ENABLE"
+    },
+    {
+      "relay": 12,
+      "name": "OI2_ENABLE"
+    },
+    {
+      "relay": 13,
+      "name": "REDE_ENABLE"
+    },
+    {
+      "relay": 14,
+      "name": "OI1_TO_T1"
+    },
+    {
+      "relay": 15,
+      "name": "OI1_TO_T2"
+    },
+    {
+      "relay": 16,
+      "name": "OI1_TO_T3"
+    },
+    {
+      "relay": 17,
+      "name": "OI1_TO_T4"
+    },
+    {
+      "relay": 18,
+      "name": "OI1_TO_T5"
+    },
+    {
+      "relay": 19,
+      "name": "OI2_TO_T1"
+    },
+    {
+      "relay": 20,
+      "name": "OI2_TO_T2"
+    },
+    {
+      "relay": 21,
+      "name": "OI2_TO_T3"
+    },
+    {
+      "relay": 22,
+      "name": "OI2_TO_T4"
+    },
+    {
+      "relay": 23,
+      "name": "OI2_TO_T5"
+    },
+    {
+      "relay": 24,
+      "name": "REDE_TO_T1"
+    },
+    {
+      "relay": 25,
+      "name": "REDE_TO_T2"
+    },
+    {
+      "relay": 26,
+      "name": "REDE_TO_T3"
+    },
+    {
+      "relay": 27,
+      "name": "REDE_TO_T4"
+    },
+    {
+      "relay": 28,
+      "name": "REDE_TO_T5"
+    },
+    {
+      "relay": 29,
+      "name": "RESERVED_1"
+    },
+    {
+      "relay": 30,
+      "name": "RESERVED_2"
+    }
   ]
 }
