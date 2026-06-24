@@ -21,48 +21,86 @@
     <span class="stat-label">Rotas</span>
     <span class="stat-value">{{ route_count }}</span>
   </div>
+  <div class="stat-card">
+    <span class="stat-label">Alarmes</span>
+    <span class="stat-value alarm-value">{{ alarms|length }}</span>
+  </div>
 </div>
 
 <div class="panel">
-  <h3>Tanques configurados</h3>
+  <h3>Alarmes ativos</h3>
+  {% if alarms %}
+    <div class="alarm-list">
+      {% for alarm in alarms %}
+      <div class="alarm-card alarm-{{ alarm.severity }}">
+        <strong>{{ alarm.severity|upper }}</strong>
+        <span>{{ alarm.message }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p>Sem alarmes ativos.</p>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>Tanques</h3>
   <div class="card-grid">
     {% for tank in tanks %}
     <div class="scada-card">
       <div class="card-top">
         <h4>{{ tank.name }}</h4>
-        {% if tank.enabled %}
-          <span class="badge badge-green">Ativo</span>
-        {% else %}
-          <span class="badge badge-red">Desativado</span>
-        {% endif %}
+        <span class="badge badge-status-{{ tank.status }}">{{ tank.status }}</span>
       </div>
-      <p><strong>ID:</strong> {{ tank.id }}</p>
-      <p><strong>Sensor:</strong> {{ tank.sensor.controller }}</p>
-      <p><strong>Endpoint:</strong> {{ tank.sensor.endpoint }}</p>
-      <p><strong>Vazio:</strong> {{ tank.thresholds.empty_percent }}%</p>
-      <p><strong>Cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
+
+      <div class="tank-level">
+        <div class="tank-bar">
+          <div class="tank-fill status-{{ tank.status }}" style="height: {{ tank.level_percent }}%;"></div>
+        </div>
+        <div class="tank-meta">
+          <div class="tank-percent">{{ tank.level_percent }}%</div>
+          <p><strong>ID:</strong> {{ tank.id }}</p>
+          <p><strong>Sensor:</strong> {{ tank.sensor.controller }}</p>
+          <p><strong>Vazio:</strong> {{ tank.thresholds.empty_percent }}%</p>
+          <p><strong>Cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
+        </div>
+      </div>
     </div>
     {% endfor %}
   </div>
 </div>
 
 <div class="panel">
-  <h3>Fontes configuradas</h3>
+  <h3>Fontes</h3>
   <div class="card-grid">
     {% for source in sources %}
     <div class="scada-card">
       <div class="card-top">
         <h4>{{ source.name }}</h4>
-        {% if source.enabled %}
-          <span class="badge badge-green">Ativa</span>
+        {% if source.active %}
+          <span class="badge badge-green">Em operação</span>
         {% else %}
-          <span class="badge badge-red">Desativada</span>
+          <span class="badge badge-red">Parada</span>
         {% endif %}
       </div>
       <p><strong>ID:</strong> {{ source.id }}</p>
       <p><strong>Relé enable:</strong> {{ source.enable_relay }}</p>
+      <p><strong>Tanque atual:</strong> {{ source.current_tank or "-" }}</p>
       <p><strong>Modo:</strong> {{ source.mode }}</p>
-      <p><strong>Sequência:</strong> {{ source.sequence | length }} tanque(s)</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Rotas disponíveis</h3>
+  <div class="route-grid">
+    {% for route in routes %}
+    <div class="route-card">
+      <span>{{ route.source_id }}</span>
+      <span class="route-arrow">→</span>
+      <span>{{ route.tank_id }}</span>
+      <span class="route-relay">R{{ route.valve_relay }}</span>
     </div>
     {% endfor %}
   </div>

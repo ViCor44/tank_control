@@ -1,7 +1,47 @@
 {
   "system_mode": "stopped",
   "last_cycle": null,
-  "sources": {},
-  "tanks": {},
-  "alarms": []
+  "sources": {
+    "oi1": {
+      "active": false,
+      "current_tank": null
+    },
+    "oi2": {
+      "active": false,
+      "current_tank": null
+    },
+    "rede": {
+      "active": false,
+      "current_tank": null
+    }
+  },
+  "tanks": {
+    "T1": {
+      "level_percent": 72,
+      "status": "normal"
+    },
+    "T2": {
+      "level_percent": 18,
+      "status": "low"
+    },
+    "T3": {
+      "level_percent": 91,
+      "status": "full"
+    },
+    "T4": {
+      "level_percent": 43,
+      "status": "normal"
+    },
+    "T5": {
+      "level_percent": 9,
+      "status": "critical_low"
+    }
+  },
+  "alarms": [
+    {
+      "id": "alarm_t5_low",
+      "severity": "high",
+      "message": "Tanque T5 em nível crítico"
+    }
+  ]
 }

@@ -13,20 +13,25 @@
   <div class="scada-card">
     <div class="card-top">
       <h4>{{ tank.name }}</h4>
-      {% if tank.enabled %}
-        <span class="badge badge-green">Ativo</span>
-      {% else %}
-        <span class="badge badge-red">Desativado</span>
-      {% endif %}
+      <span class="badge badge-status-{{ tank.status }}">{{ tank.status }}</span>
     </div>
-    <p><strong>ID:</strong> {{ tank.id }}</p>
-    <p><strong>Sensor:</strong> {{ tank.sensor.type }}</p>
-    <p><strong>Controlador:</strong> {{ tank.sensor.controller }}</p>
-    <p><strong>Endpoint:</strong> {{ tank.sensor.endpoint }}</p>
-    <p><strong>Threshold vazio:</strong> {{ tank.thresholds.empty_percent }}%</p>
-    <p><strong>Threshold cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
-    <p><strong>Relé vazio:</strong> {{ tank.relays.empty }}</p>
-    <p><strong>Relé cheio:</strong> {{ tank.relays.full }}</p>
+
+    <div class="tank-level">
+      <div class="tank-bar">
+        <div class="tank-fill status-{{ tank.status }}" style="height: {{ tank.level_percent }}%;"></div>
+      </div>
+      <div class="tank-meta">
+        <div class="tank-percent">{{ tank.level_percent }}%</div>
+        <p><strong>ID:</strong> {{ tank.id }}</p>
+        <p><strong>Sensor:</strong> {{ tank.sensor.type }}</p>
+        <p><strong>Controlador:</strong> {{ tank.sensor.controller }}</p>
+        <p><strong>Endpoint:</strong> {{ tank.sensor.endpoint }}</p>
+        <p><strong>Threshold vazio:</strong> {{ tank.thresholds.empty_percent }}%</p>
+        <p><strong>Threshold cheio:</strong> {{ tank.thresholds.full_percent }}%</p>
+        <p><strong>Relé vazio:</strong> {{ tank.relays.empty }}</p>
+        <p><strong>Relé cheio:</strong> {{ tank.relays.full }}</p>
+      </div>
+    </div>
   </div>
   {% endfor %}
 </div>
