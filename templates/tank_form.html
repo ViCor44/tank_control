@@ -11,85 +11,81 @@
 <div class="panel">
   <form method="post" class="form-grid">
     <div class="form-group">
-      <label>Nome</label>
-      <input type="text" name="name" value="{{ tank.name }}" required>
+      <label for="name">Nome</label>
+      <input id="name" type="text" name="name" value="{{ tank.name }}" required>
     </div>
 
     <div class="form-group checkbox-group">
-      <label>
-        <input type="checkbox" name="enabled" {% if tank.enabled %}checked{% endif %}>
+      <label for="enabled">
+        <input id="enabled" type="checkbox" name="enabled" {% if tank.enabled %}checked{% endif %}>
         Ativo
       </label>
     </div>
 
     <div class="form-group">
-      <label>Capacidade (litros)</label>
-      <input type="number" name="capacity_liters" value="{{ tank.capacity_liters or 1000 }}" required>
+      <label for="capacity_liters">Capacidade (litros)</label>
+      <input id="capacity_liters" type="number" name="capacity_liters" value="{{ tank.capacity_liters or 1000 }}" required>
     </div>
 
     <div class="form-group">
-      <label>Tipo de sensor</label>
-      <input type="text" name="sensor_type" value="{{ tank.sensor.type }}" required>
+      <label for="distance_empty_cm">Distância sensor com tanque vazio (cm)</label>
+      <input id="distance_empty_cm" type="number" name="distance_empty_cm" value="{{ tank.calibration.distance_empty_cm if tank.calibration else 150 }}" required>
     </div>
 
     <div class="form-group">
-      <label>Controlador</label>
-      <input type="text" name="sensor_controller" value="{{ tank.sensor.controller }}" required>
+      <label for="distance_full_cm">Distância sensor com tanque cheio (cm)</label>
+      <input id="distance_full_cm" type="number" name="distance_full_cm" value="{{ tank.calibration.distance_full_cm if tank.calibration else 20 }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="sensor_type">Tipo de sensor</label>
+      <input id="sensor_type" type="text" name="sensor_type" value="{{ tank.sensor.type }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="sensor_controller">Controlador</label>
+      <input id="sensor_controller" type="text" name="sensor_controller" value="{{ tank.sensor.controller }}" required>
     </div>
 
     <div class="form-group form-group-full">
-      <label>Endpoint do sensor</label>
-      <input type="text" name="sensor_endpoint" value="{{ tank.sensor.endpoint }}" required>
+      <label for="sensor_endpoint">Endpoint do sensor</label>
+      <input id="sensor_endpoint" type="text" name="sensor_endpoint" value="{{ tank.sensor.endpoint }}" required>
     </div>
 
     <div class="form-group">
-      <label>Método HTTP</label>
-      <input type="text" name="sensor_method" value="{{ tank.sensor.method }}" required>
+      <label for="sensor_method">Método HTTP</label>
+      <input id="sensor_method" type="text" name="sensor_method" value="{{ tank.sensor.method }}" required>
     </div>
 
     <div class="form-group">
-      <label>Chave JSON do nível</label>
-      <input type="text" name="sensor_level_key" value="{{ tank.sensor.level_key }}" required>
+      <label for="sensor_level_key">Chave JSON do nível</label>
+      <input id="sensor_level_key" type="text" name="sensor_level_key" value="{{ tank.sensor.level_key }}" required>
     </div>
 
     <div class="form-group">
-      <label>Threshold vazio (%)</label>
-      <input type="number" name="empty_percent" value="{{ tank.thresholds.empty_percent }}" required>
+      <label for="empty_percent">Threshold vazio (%)</label>
+      <input id="empty_percent" type="number" name="empty_percent" value="{{ tank.thresholds.empty_percent }}" required>
     </div>
 
     <div class="form-group">
-      <label>Threshold cheio (%)</label>
-      <input type="number" name="full_percent" value="{{ tank.thresholds.full_percent }}" required>
+      <label for="full_percent">Threshold cheio (%)</label>
+      <input id="full_percent" type="number" name="full_percent" value="{{ tank.thresholds.full_percent }}" required>
     </div>
 
     <div class="form-group">
-      <label>Relé vazio</label>
-      <input type="number" name="relay_empty" value="{{ tank.relays.empty }}" required>
+      <label for="relay_empty">Relé vazio</label>
+      <input id="relay_empty" type="number" name="relay_empty" value="{{ tank.relays.empty }}" required>
     </div>
 
     <div class="form-group">
-      <label>Relé cheio</label>
-      <input type="number" name="relay_full" value="{{ tank.relays.full }}" required>
+      <label for="relay_full">Relé cheio</label>
+      <input id="relay_full" type="number" name="relay_full" value="{{ tank.relays.full }}" required>
     </div>
 
     <div class="form-actions form-group-full">
       <button type="submit" class="action-button">Guardar</button>
       <a href="{{ url_for('tanks_page') }}" class="action-button action-button-secondary">Cancelar</a>
     </div>
-    <div class="form-group">
-        <label>Capacidade (litros)</label>
-        <input type="number" name="capacity_liters" value="{{ tank.capacity_liters or 1000 }}" required>
-        </div>
-
-        <div class="form-group">
-        <label>Distância sensor com tanque vazio (cm)</label>
-        <input type="number" name="sensor_distance_empty_cm" value="{{ tank.geometry.sensor_distance_empty_cm if tank.geometry else 150 }}" required>
-        </div>
-
-        <div class="form-group">
-        <label>Distância sensor com tanque cheio (cm)</label>
-        <input type="number" name="sensor_distance_full_cm" value="{{ tank.geometry.sensor_distance_full_cm if tank.geometry else 20 }}" required>
-        </div>
   </form>
 </div>
 {% endblock %}
