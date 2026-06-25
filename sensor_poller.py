@@ -70,7 +70,7 @@ def update_tank_states():
 def main():
     while True:
         update_tank_states()
-        time.sleep(20)
+        time.sleep(10)
 
 
 if __name__ == "__main__":
