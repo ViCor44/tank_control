@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from services.config_service import load_config, load_state, save_config
+from services.relay_service import build_relay_board_service
 
 
 def enrich_tanks(tanks, tank_states):
@@ -81,6 +82,34 @@ def create_app():
     @app.route("/api/state")
     def api_state():
         return jsonify(build_dashboard_data())
+
+    @app.route("/api/relays")
+    def api_relays():
+        config = load_config()
+        relay_service = build_relay_board_service(config)
+        result = relay_service.read_relays(1, 30)
+        return jsonify(result), 200 if result.get("ok") else 500
+
+    @app.route("/api/relays/all-off", methods=["POST"])
+    def api_relays_all_off():
+        config = load_config()
+        relay_service = build_relay_board_service(config)
+        result = relay_service.all_off()
+        return jsonify(result), 200 if result.get("ok") else 500
+
+    @app.route("/api/relays/<int:relay_number>/on", methods=["POST"])
+    def api_relay_on(relay_number):
+        config = load_config()
+        relay_service = build_relay_board_service(config)
+        result = relay_service.relay_on(relay_number)
+        return jsonify(result), 200 if result.get("ok") else 500
+
+    @app.route("/api/relays/<int:relay_number>/off", methods=["POST"])
+    def api_relay_off(relay_number):
+        config = load_config()
+        relay_service = build_relay_board_service(config)
+        result = relay_service.relay_off(relay_number)
+        return jsonify(result), 200 if result.get("ok") else 500
 
     @app.route("/tanks")
     def tanks_page():
