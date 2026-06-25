@@ -3,7 +3,8 @@ import time
 from pathlib import Path
 
 from services.config_service import load_config, load_state
-from services.tank_service import get_tank_sensor_reading, tank_status_from_percent
+from services.tank_service import get_tank_sensor_reading, calculate_tank_status
+from services.control_service import apply_tank_level_relays
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -41,7 +42,7 @@ def update_tank_states():
 
             if reading.get("ok"):
                 level_percent = reading["level_percent"]
-                status = tank_status_from_percent(
+                status = calculate_tank_status(
                     level_percent,
                     tank["thresholds"]["empty_percent"],
                     tank["thresholds"]["full_percent"]
@@ -62,6 +63,7 @@ def update_tank_states():
             state["tanks"][tank_id]["sensor_ok"] = False
             state["tanks"][tank_id]["last_error"] = str(e)
 
+    state = apply_tank_level_relays(config, state)
     save_state(state)
 
 

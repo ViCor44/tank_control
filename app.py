@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from services.config_service import load_config, load_state, save_config
-from services.relay_service import build_relay_board_service
 
 
 def enrich_tanks(tanks, tank_states):
@@ -71,6 +70,66 @@ def build_dashboard_data():
     }
 
 
+def build_empty_tank():
+    return {
+        "id": "",
+        "name": "",
+        "enabled": True,
+        "capacity_liters": 1000,
+        "calibration": {
+            "distance_empty_cm": 150,
+            "distance_full_cm": 20
+        },
+        "sensor": {
+            "type": "a02yyuw",
+            "controller": "",
+            "endpoint": "",
+            "method": "GET",
+            "level_key": "distance_cm"
+        },
+        "thresholds": {
+            "empty_percent": 15,
+            "full_percent": 90
+        },
+        "relays": {
+            "empty": 0,
+            "full": 0
+        }
+    }
+
+
+def populate_tank_from_form(tank, form):
+    tank["id"] = form.get("id", "").strip()
+    tank["name"] = form.get("name", "").strip()
+    tank["enabled"] = form.get("enabled") == "on"
+    tank["capacity_liters"] = int(form.get("capacity_liters", 0))
+
+    tank["calibration"] = {
+        "distance_empty_cm": int(form.get("distance_empty_cm", 0)),
+        "distance_full_cm": int(form.get("distance_full_cm", 0)),
+    }
+
+    tank["sensor"] = {
+        "type": form.get("sensor_type", "").strip(),
+        "controller": form.get("sensor_controller", "").strip(),
+        "endpoint": form.get("sensor_endpoint", "").strip(),
+        "method": form.get("sensor_method", "GET").strip(),
+        "level_key": form.get("sensor_level_key", "").strip(),
+    }
+
+    tank["thresholds"] = {
+        "empty_percent": int(form.get("empty_percent", 0)),
+        "full_percent": int(form.get("full_percent", 0)),
+    }
+
+    tank["relays"] = {
+        "empty": int(form.get("relay_empty", 0)),
+        "full": int(form.get("relay_full", 0)),
+    }
+
+    return tank
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -83,34 +142,6 @@ def create_app():
     def api_state():
         return jsonify(build_dashboard_data())
 
-    @app.route("/api/relays")
-    def api_relays():
-        config = load_config()
-        relay_service = build_relay_board_service(config)
-        result = relay_service.read_relays(1, 30)
-        return jsonify(result), 200 if result.get("ok") else 500
-
-    @app.route("/api/relays/all-off", methods=["POST"])
-    def api_relays_all_off():
-        config = load_config()
-        relay_service = build_relay_board_service(config)
-        result = relay_service.all_off()
-        return jsonify(result), 200 if result.get("ok") else 500
-
-    @app.route("/api/relays/<int:relay_number>/on", methods=["POST"])
-    def api_relay_on(relay_number):
-        config = load_config()
-        relay_service = build_relay_board_service(config)
-        result = relay_service.relay_on(relay_number)
-        return jsonify(result), 200 if result.get("ok") else 500
-
-    @app.route("/api/relays/<int:relay_number>/off", methods=["POST"])
-    def api_relay_off(relay_number):
-        config = load_config()
-        relay_service = build_relay_board_service(config)
-        result = relay_service.relay_off(relay_number)
-        return jsonify(result), 200 if result.get("ok") else 500
-
     @app.route("/tanks")
     def tanks_page():
         config = load_config()
@@ -118,6 +149,32 @@ def create_app():
 
         tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
         return render_template("tanks.html", tanks=tanks, tank_count=len(tanks))
+
+    @app.route("/tanks/new", methods=["GET", "POST"])
+    def new_tank():
+        config = load_config()
+        tanks = config.get("tanks", [])
+        tank = build_empty_tank()
+
+        if request.method == "POST":
+            populate_tank_from_form(tank, request.form)
+
+            if not tank["id"]:
+                return "Tank ID is required", 400
+
+            existing = get_tank_by_id(tanks, tank["id"])
+            if existing is not None:
+                return "Tank ID already exists", 400
+
+            tanks.append(tank)
+            save_config(config)
+            return redirect(url_for("tanks_page"))
+
+        return render_template(
+            "tank_form.html",
+            tank=tank,
+            form_mode="new"
+        )
 
     @app.route("/tanks/<tank_id>/edit", methods=["GET", "POST"])
     def edit_tank(tank_id):
@@ -138,27 +195,25 @@ def create_app():
             }
 
         if request.method == "POST":
-            tank["name"] = request.form.get("name", "").strip()
-            tank["enabled"] = request.form.get("enabled") == "on"
-            tank["capacity_liters"] = int(request.form.get("capacity_liters", 0))
-            tank["calibration"] = {
-                "distance_empty_cm": int(request.form.get("distance_empty_cm", 0)),
-                "distance_full_cm": int(request.form.get("distance_full_cm", 0)),
-            }
-            tank["sensor"]["type"] = request.form.get("sensor_type", "").strip()
-            tank["sensor"]["controller"] = request.form.get("sensor_controller", "").strip()
-            tank["sensor"]["endpoint"] = request.form.get("sensor_endpoint", "").strip()
-            tank["sensor"]["method"] = request.form.get("sensor_method", "GET").strip()
-            tank["sensor"]["level_key"] = request.form.get("sensor_level_key", "").strip()
-            tank["thresholds"]["empty_percent"] = int(request.form.get("empty_percent", 0))
-            tank["thresholds"]["full_percent"] = int(request.form.get("full_percent", 0))
-            tank["relays"]["empty"] = int(request.form.get("relay_empty", 0))
-            tank["relays"]["full"] = int(request.form.get("relay_full", 0))
+            original_id = tank["id"]
+            populate_tank_from_form(tank, request.form)
+
+            if not tank["id"]:
+                return "Tank ID is required", 400
+
+            if tank["id"] != original_id:
+                existing = get_tank_by_id(tanks, tank["id"])
+                if existing is not None and existing is not tank:
+                    return "Tank ID already exists", 400
 
             save_config(config)
             return redirect(url_for("tanks_page"))
 
-        return render_template("tank_form.html", tank=tank)
+        return render_template(
+            "tank_form.html",
+            tank=tank,
+            form_mode="edit"
+        )
 
     @app.route("/sources")
     def sources_page():

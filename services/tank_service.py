@@ -19,13 +19,13 @@ def calculate_volume_liters(level_percent, capacity_liters):
     return round((level_percent / 100) * capacity_liters, 1)
 
 
-def tank_status_from_percent(level_percent, empty_percent, full_percent):
+def calculate_tank_status(level_percent, empty_percent, full_percent):
     if level_percent <= empty_percent:
         return "critical_low"
-    if level_percent < 30:
-        return "low"
     if level_percent >= full_percent:
         return "full"
+    if level_percent < 30:
+        return "low"
     return "normal"
 
 
