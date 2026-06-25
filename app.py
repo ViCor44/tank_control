@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
+from datetime import datetime, timezone
 
 from services.config_service import load_config, load_state, save_config
 
@@ -26,6 +27,7 @@ def enrich_tanks(tanks, tank_states):
             "volume_liters": volume_liters,
             "volume_m3": volume_m3,
             "sensor_ok": state.get("sensor_ok", False),
+            "last_update": state.get("last_update")
         })
 
     return enriched
@@ -67,6 +69,7 @@ def build_dashboard_data():
         "sources": sources,
         "routes": routes,
         "alarms": alarms,
+        "state_last_updated": state.get("state_last_updated")
     }
 
 
@@ -148,7 +151,12 @@ def create_app():
         state = load_state()
 
         tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
-        return render_template("tanks.html", tanks=tanks, tank_count=len(tanks))
+        return render_template(
+            "tanks.html",
+            tanks=tanks,
+            tank_count=len(tanks),
+            state_last_updated=state.get("state_last_updated")
+        )
 
     @app.route("/tanks/new", methods=["GET", "POST"])
     def new_tank():

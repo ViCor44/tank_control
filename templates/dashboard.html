@@ -4,8 +4,17 @@
 
 {% block content %}
 <div class="page-header">
-  <h2>Dashboard</h2>
-  <span class="badge badge-blue" id="system-mode">{{ system_mode }}</span>
+  <div>
+    <h2>Dashboard</h2>
+    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <span class="badge badge-blue" id="system-mode">{{ system_mode }}</span>
+      <span class="badge badge-blue" id="state-freshness">estado</span>
+      <span style="font-size: 0.9rem; opacity: 0.85;">
+        Última atualização:
+        <strong id="state-last-updated">{{ state_last_updated or "-" }}</strong>
+      </span>
+    </div>
+  </div>
 </div>
 
 <div class="stats-grid">
@@ -63,6 +72,7 @@
           <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> m³</p>
           <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
           <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
+          <p><strong>Atualizado:</strong> <span id="tank-last-update-{{ tank.id }}">{{ tank.last_update or "-" }}</span></p>
         </div>
       </div>
     </div>
@@ -98,6 +108,37 @@ function renderAlarms(alarms) {
   `).join("");
 }
 
+function getFreshnessLabel(isoString) {
+  if (!isoString) {
+    return { text: "sem dados", className: "badge badge-status-unknown" };
+  }
+
+  const updatedAt = new Date(isoString);
+  const now = new Date();
+  const ageSeconds = (now - updatedAt) / 1000;
+
+  if (ageSeconds <= 15) {
+    return { text: "fresco", className: "badge badge-status-normal" };
+  }
+
+  if (ageSeconds <= 30) {
+    return { text: "aceitável", className: "badge badge-blue" };
+  }
+
+  return { text: "antigo", className: "badge badge-status-critical_low" };
+}
+
+function updateFreshness(stateLastUpdated) {
+  const freshnessEl = document.getElementById("state-freshness");
+  const lastUpdatedEl = document.getElementById("state-last-updated");
+  if (!freshnessEl || !lastUpdatedEl) return;
+
+  const freshness = getFreshnessLabel(stateLastUpdated);
+  freshnessEl.className = freshness.className;
+  freshnessEl.textContent = freshness.text;
+  lastUpdatedEl.textContent = stateLastUpdated ?? "-";
+}
+
 function updateDashboard(data) {
   document.getElementById("system-mode").textContent = data.system_mode;
   document.getElementById("tank-count").textContent = data.tank_count;
@@ -105,6 +146,7 @@ function updateDashboard(data) {
   document.getElementById("route-count").textContent = data.route_count;
   document.getElementById("alarm-count").textContent = data.alarms.length;
 
+  updateFreshness(data.state_last_updated);
   renderAlarms(data.alarms);
 
   data.tanks.forEach(tank => {
@@ -114,6 +156,7 @@ function updateDashboard(data) {
     const sensorOkEl = document.getElementById(`tank-sensor-ok-${tank.id}`);
     const statusEl = document.getElementById(`tank-status-${tank.id}`);
     const fillEl = document.getElementById(`tank-fill-${tank.id}`);
+    const lastUpdateEl = document.getElementById(`tank-last-update-${tank.id}`);
 
     if (percentEl) percentEl.textContent = `${tank.level_percent}%`;
     if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
@@ -121,6 +164,7 @@ function updateDashboard(data) {
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
+    if (lastUpdateEl) lastUpdateEl.textContent = tank.last_update ?? "-";
   });
 }
 
@@ -136,6 +180,10 @@ async function fetchDashboardState() {
   }
 }
 
-setInterval(fetchDashboardState, 10000);
+setInterval(fetchDashboardState, 5000);
+setInterval(() => {
+  const lastUpdated = document.getElementById("state-last-updated")?.textContent;
+  updateFreshness(lastUpdated && lastUpdated !== "-" ? lastUpdated : null);
+}, 5000);
 </script>
 {% endblock %}
