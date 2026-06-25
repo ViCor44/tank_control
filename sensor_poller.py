@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from services.config_service import load_config, load_state
 from services.tank_service import get_tank_sensor_reading, calculate_tank_status
-from services.control_service import apply_tank_level_relays
+from services.control_service import apply_tank_level_relays, apply_source_relays
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -27,6 +27,9 @@ def update_tank_states():
 
     if "tanks" not in state:
         state["tanks"] = {}
+
+    if "sources" not in state:
+        state["sources"] = {}
 
     for tank in config.get("tanks", []):
         tank_id = tank["id"]
@@ -73,6 +76,7 @@ def update_tank_states():
             state["tanks"][tank_id]["last_update"] = now_iso()
 
     state = apply_tank_level_relays(config, state)
+    state = apply_source_relays(config, state)
     state["state_last_updated"] = now_iso()
     save_state(state)
 

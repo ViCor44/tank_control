@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}
+  {% if form_mode == "new" %}
+    Nova fonte - tank_control
+  {% else %}
+    Editar fonte - tank_control
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  {% if form_mode == "new" %}
+    <h2>Nova fonte</h2>
+  {% else %}
+    <h2>Editar fonte {{ source.id }}</h2>
+  {% endif %}
+  <span class="badge badge-blue">Configuração</span>
+</div>
+
+<div class="panel">
+  <form method="post" class="form-grid">
+    <div class="form-group">
+      <label for="id">ID</label>
+      <input id="id" type="text" name="id" value="{{ source.id }}" required>
+    </div>
+
+    <div class="form-group">
+      <label for="name">Nome</label>
+      <input id="name" type="text" name="name" value="{{ source.name }}" required>
+    </div>
+
+    <div class="form-group checkbox-group">
+      <label for="enabled">
+        <input id="enabled" type="checkbox" name="enabled" {% if source.enabled %}checked{% endif %}>
+        Ativa
+      </label>
+    </div>
+
+    <div class="form-group">
+      <label for="valve_relay">Relé da válvula</label>
+      <input id="valve_relay" type="number" name="valve_relay" value="{{ source.valve_relay or 0 }}" required>
+    </div>
+
+    <div class="form-actions form-group-full">
+      <button type="submit" class="action-button">
+        {% if form_mode == "new" %}Criar fonte{% else %}Guardar{% endif %}
+      </button>
+      <a href="{{ url_for('sources_page') }}" class="action-button action-button-secondary">Cancelar</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

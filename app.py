@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
-from datetime import datetime, timezone
 
 from services.config_service import load_config, load_state, save_config
 
@@ -41,7 +40,8 @@ def enrich_sources(sources, source_states):
         enriched.append({
             **source,
             "active": state.get("active", False),
-            "current_tank": state.get("current_tank"),
+            "status": state.get("status", "idle"),
+            "last_update": state.get("last_update")
         })
 
     return enriched
@@ -49,6 +49,10 @@ def enrich_sources(sources, source_states):
 
 def get_tank_by_id(tanks, tank_id):
     return next((tank for tank in tanks if tank["id"] == tank_id), None)
+
+
+def get_source_by_id(sources, source_id):
+    return next((source for source in sources if source.get("id") == source_id), None)
 
 
 def build_dashboard_data():
@@ -101,6 +105,15 @@ def build_empty_tank():
     }
 
 
+def build_empty_source():
+    return {
+        "id": "",
+        "name": "",
+        "enabled": True,
+        "valve_relay": 0
+    }
+
+
 def populate_tank_from_form(tank, form):
     tank["id"] = form.get("id", "").strip()
     tank["name"] = form.get("name", "").strip()
@@ -131,6 +144,14 @@ def populate_tank_from_form(tank, form):
     }
 
     return tank
+
+
+def populate_source_from_form(source, form):
+    source["id"] = form.get("id", "").strip()
+    source["name"] = form.get("name", "").strip()
+    source["enabled"] = form.get("enabled") == "on"
+    source["valve_relay"] = int(form.get("valve_relay", 0))
+    return source
 
 
 def create_app():
@@ -229,7 +250,71 @@ def create_app():
         state = load_state()
 
         sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
-        return render_template("sources.html", sources=sources)
+        return render_template(
+            "sources.html",
+            sources=sources,
+            source_count=len(sources),
+            state_last_updated=state.get("state_last_updated")
+        )
+
+    @app.route("/sources/new", methods=["GET", "POST"])
+    def new_source():
+        config = load_config()
+        sources = config.get("sources", [])
+        source = build_empty_source()
+
+        if request.method == "POST":
+            populate_source_from_form(source, request.form)
+
+            if not source["id"]:
+                return "Source ID is required", 400
+
+            existing = get_source_by_id(sources, source["id"])
+            if existing is not None:
+                return "Source ID already exists", 400
+
+            sources.append(source)
+            save_config(config)
+            return redirect(url_for("sources_page"))
+
+        return render_template(
+            "source_form.html",
+            source=source,
+            form_mode="new"
+        )
+
+    @app.route("/sources/<source_id>/edit", methods=["GET", "POST"])
+    def edit_source(source_id):
+        config = load_config()
+        sources = config.get("sources", [])
+        source = get_source_by_id(sources, source_id)
+
+        if source is None:
+            return "Source not found", 404
+
+        if "valve_relay" not in source:
+            source["valve_relay"] = 0
+
+        if request.method == "POST":
+            original_id = source["id"]
+            populate_source_from_form(source, request.form)
+
+            if not source["id"]:
+                return "Source ID is required", 400
+
+            if source["id"] != original_id:
+                existing = get_source_by_id(sources, source["id"])
+                if existing is not None and existing is not source:
+                    return "Source ID already exists", 400
+
+            save_config(config)
+            return redirect(url_for("sources_page"))
+
+        return render_template(
+            "source_form.html",
+            source=source,
+            form_mode="edit"
+        )
 
     @app.route("/rules")
     def rules_page():
