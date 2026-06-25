@@ -81,6 +81,22 @@
 </div>
 
 <script>
+function formatDateTime(isoString) {
+  if (!isoString || isoString === "-") return "-";
+
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return isoString;
+
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
+  return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+}
+
 function updateBadgeStatus(element, status) {
   element.className = "badge badge-status-" + status;
   element.textContent = status;
@@ -109,7 +125,7 @@ function renderAlarms(alarms) {
 }
 
 function getFreshnessLabel(isoString) {
-  if (!isoString) {
+  if (!isoString || isoString === "-") {
     return { text: "sem dados", className: "badge badge-status-unknown" };
   }
 
@@ -136,7 +152,8 @@ function updateFreshness(stateLastUpdated) {
   const freshness = getFreshnessLabel(stateLastUpdated);
   freshnessEl.className = freshness.className;
   freshnessEl.textContent = freshness.text;
-  lastUpdatedEl.textContent = stateLastUpdated ?? "-";
+  lastUpdatedEl.dataset.iso = stateLastUpdated || "";
+  lastUpdatedEl.textContent = formatDateTime(stateLastUpdated);
 }
 
 function updateDashboard(data) {
@@ -164,7 +181,26 @@ function updateDashboard(data) {
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
-    if (lastUpdateEl) lastUpdateEl.textContent = tank.last_update ?? "-";
+
+    if (lastUpdateEl) {
+      lastUpdateEl.dataset.iso = tank.last_update || "";
+      lastUpdateEl.textContent = formatDateTime(tank.last_update);
+    }
+  });
+}
+
+function formatInitialDates() {
+  const stateLastUpdatedEl = document.getElementById("state-last-updated");
+  if (stateLastUpdatedEl) {
+    const raw = stateLastUpdatedEl.textContent.trim();
+    stateLastUpdatedEl.dataset.iso = raw === "-" ? "" : raw;
+    stateLastUpdatedEl.textContent = formatDateTime(raw);
+  }
+
+  document.querySelectorAll("[id^='tank-last-update-']").forEach((el) => {
+    const raw = el.textContent.trim();
+    el.dataset.iso = raw === "-" ? "" : raw;
+    el.textContent = formatDateTime(raw);
   });
 }
 
@@ -180,10 +216,12 @@ async function fetchDashboardState() {
   }
 }
 
+formatInitialDates();
+
 setInterval(fetchDashboardState, 5000);
 setInterval(() => {
-  const lastUpdated = document.getElementById("state-last-updated")?.textContent;
-  updateFreshness(lastUpdated && lastUpdated !== "-" ? lastUpdated : null);
+  const lastUpdatedIso = document.getElementById("state-last-updated")?.dataset.iso || null;
+  updateFreshness(lastUpdatedIso);
 }, 5000);
 </script>
 {% endblock %}
