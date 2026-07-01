@@ -472,6 +472,17 @@ body {
   font-size: 14px;
 }
 
+.form-group select {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  min-height: 46px;
+  appearance: auto;
+}
+
 .checkbox-group {
   justify-content: flex-end;
 }
@@ -720,3 +731,111 @@ body {
   flex-direction: column;
   gap: 14px;
 }
+
+/* ============ Routes page ============ */
+
+.routes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+
+.route-row-disabled {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.route-row-missing {
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.route-endpoints {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 260px;
+  flex: 1;
+}
+
+.route-tank-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 999px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.route-tank-pill small {
+  color: var(--muted);
+  font-weight: normal;
+  font-size: 12px;
+}
+
+.route-relay-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.route-relay-form label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.route-relay-form select {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  min-width: 180px;
+}
+
+.route-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.route-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+}
+
+.route-add label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.route-add select {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  min-width: 180px;
+}
+

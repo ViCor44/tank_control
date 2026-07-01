@@ -31,7 +31,7 @@
 
     <div class="tank-meta">
       <p><strong>ID:</strong> {{ source.id }}</p>
-      <p><strong>Relé da válvula:</strong> {{ source.valve_relay }}</p>
+      <p><strong>Relé da fonte:</strong> {{ source.enable_relay if source.enable_relay is not none else '-' }}</p>
       <p><strong>Ativa:</strong> <span id="source-active-{{ source.id }}">{{ "Sim" if source.active else "Não" }}</span></p>
       <p><strong>Atualizado:</strong> <span id="source-last-update-{{ source.id }}">{{ source.last_update or "-" }}</span></p>
       <p>

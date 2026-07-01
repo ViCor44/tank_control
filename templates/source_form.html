@@ -38,8 +38,15 @@
     </div>
 
     <div class="form-group">
-      <label for="valve_relay">Relé da válvula</label>
-      <input id="valve_relay" type="number" name="valve_relay" value="{{ source.valve_relay or 0 }}" required>
+      <label for="enable_relay">Relé da fonte</label>
+      <select id="enable_relay" name="enable_relay" required>
+        <option value="0" {% if not source.enable_relay %}selected{% endif %}>— sem relé —</option>
+        {% for option in relay_options %}
+        <option value="{{ option.number }}" {% if source.enable_relay == option.number %}selected{% endif %}>
+          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="form-actions form-group-full">

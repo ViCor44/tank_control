@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Rotas - tank_control{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2>Rotas</h2>
+    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <span class="badge badge-blue">{{ route_count }} rotas em {{ source_count }} fontes</span>
+      <span class="badge badge-blue">Fonte → Tanque · Relé da válvula</span>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
+    Cada rota liga uma fonte a um tanque através de um relé de válvula. Só é preciso criar rotas
+    para os pares fonte/tanque que realmente se vão usar — as sequências em <em>Regras</em> só
+    conseguem escolher tanques que tenham rota.
+  </p>
+
+  <div class="sequence-list">
+    {% for card in source_cards %}
+    <div class="sequence-source">
+      <div class="sequence-source-header">
+        <div>
+          <h4 style="margin: 0;">
+            {{ card.name }}
+            <span class="badge {{ 'badge-green' if card.enabled else 'badge-red' }}">
+              {{ 'ativa' if card.enabled else 'inativa' }}
+            </span>
+          </h4>
+          <div style="color: var(--muted); font-size: 13px; margin-top: 4px;">
+            ID: <strong>{{ card.id }}</strong> · {{ card.routes|length }} rotas
+          </div>
+        </div>
+      </div>
+
+      {% if card.routes %}
+      <div class="routes-list">
+        {% for route in card.routes %}
+        <div class="route-row {% if not route.enabled %}route-row-disabled{% endif %} {% if not route.tank_exists %}route-row-missing{% endif %}">
+          <div class="route-endpoints">
+            <span class="sequence-source-pill">{{ card.name }}</span>
+            <span class="sequence-arrow">→</span>
+            <span class="route-tank-pill">
+              {{ route.tank_name }}
+              <small>{{ route.tank_id }}</small>
+              {% if not route.tank_exists %}
+              <span class="badge badge-red" style="margin-left: 6px;">inexistente</span>
+              {% endif %}
+            </span>
+          </div>
+
+          <form method="post" action="{{ url_for('route_action') }}" class="route-relay-form">
+            <input type="hidden" name="action" value="update_relay">
+            <input type="hidden" name="source_id" value="{{ route.source_id }}">
+            <input type="hidden" name="tank_id" value="{{ route.tank_id }}">
+            <label for="relay-{{ route.source_id }}-{{ route.tank_id }}">Relé:</label>
+            <select id="relay-{{ route.source_id }}-{{ route.tank_id }}" name="valve_relay">
+              <option value="0" {% if not route.valve_relay %}selected{% endif %}>— sem relé —</option>
+              {% for option in route.relay_options %}
+              <option value="{{ option.number }}" {% if route.valve_relay == option.number %}selected{% endif %}>
+                Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="action-button action-button-small">Guardar</button>
+          </form>
+
+          <div class="route-actions">
+            <form method="post" action="{{ url_for('route_action') }}">
+              <input type="hidden" name="action" value="toggle">
+              <input type="hidden" name="source_id" value="{{ route.source_id }}">
+              <input type="hidden" name="tank_id" value="{{ route.tank_id }}">
+              <button type="submit" class="icon-button" title="{{ 'Desativar' if route.enabled else 'Ativar' }}">
+                {{ '⏸' if route.enabled else '▶' }}
+              </button>
+            </form>
+            <form method="post" action="{{ url_for('route_action') }}">
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="source_id" value="{{ route.source_id }}">
+              <input type="hidden" name="tank_id" value="{{ route.tank_id }}">
+              <button type="submit" class="icon-button icon-button-danger" title="Remover">✕</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="sequence-empty">Sem rotas configuradas para esta fonte</div>
+      {% endif %}
+
+      {% if card.available_tanks %}
+      <form method="post" action="{{ url_for('add_route') }}" class="route-add">
+        <input type="hidden" name="source_id" value="{{ card.id }}">
+
+        <label for="add-tank-{{ card.id }}">Adicionar rota:</label>
+        <select id="add-tank-{{ card.id }}" name="tank_id" required>
+          <option value="" disabled selected>Escolher tanque…</option>
+          {% for tank in card.available_tanks %}
+          <option value="{{ tank.id }}">{{ tank.name }} ({{ tank.id }})</option>
+          {% endfor %}
+        </select>
+
+        <label for="add-relay-{{ card.id }}">Relé:</label>
+        <select id="add-relay-{{ card.id }}" name="valve_relay" required>
+          <option value="0" selected>— sem relé —</option>
+          {% for option in card.add_relay_options %}
+          <option value="{{ option.number }}">
+            Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+
+        <button type="submit" class="action-button action-button-small">+ Adicionar rota</button>
+      </form>
+      {% else %}
+      <div style="padding: 8px 4px; color: var(--muted); font-size: 13px; font-style: italic;">
+        Todos os tanques já têm rota nesta fonte.
+      </div>
+      {% endif %}
+    </div>
+    {% else %}
+    <p>Sem fontes configuradas. Crie primeiro fontes e tanques.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

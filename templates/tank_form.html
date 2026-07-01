@@ -89,12 +89,26 @@
 
     <div class="form-group">
       <label for="relay_empty">Relé vazio</label>
-      <input id="relay_empty" type="number" name="relay_empty" value="{{ tank.relays.empty }}" required>
+      <select id="relay_empty" name="relay_empty" required>
+        <option value="0" {% if not tank.relays.empty %}selected{% endif %}>— sem relé —</option>
+        {% for option in relay_options_empty %}
+        <option value="{{ option.number }}" {% if tank.relays.empty == option.number %}selected{% endif %}>
+          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="form-group">
       <label for="relay_full">Relé cheio</label>
-      <input id="relay_full" type="number" name="relay_full" value="{{ tank.relays.full }}" required>
+      <select id="relay_full" name="relay_full" required>
+        <option value="0" {% if not tank.relays.full %}selected{% endif %}>— sem relé —</option>
+        {% for option in relay_options_full %}
+        <option value="{{ option.number }}" {% if tank.relays.full == option.number %}selected{% endif %}>
+          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+        </option>
+        {% endfor %}
+      </select>
     </div>
 
     <div class="form-actions form-group-full">

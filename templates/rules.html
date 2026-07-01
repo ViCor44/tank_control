@@ -64,7 +64,7 @@
         {% if source.steps %}
           {% for step in source.steps %}
           <div class="sequence-arrow">→</div>
-          <div class="sequence-step {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %}">
+          <div class="sequence-step {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}">
             <div class="sequence-step-header">
               <span class="sequence-step-index">{{ loop.index }}</span>
               <div>
@@ -76,6 +76,7 @@
                   · <span class="badge-status-{{ step.status }} sequence-status-badge">{{ step.status }}</span>
                   {% endif %}
                   {% if not step.tank_exists %}· <span style="color: var(--red);">tanque não existe</span>{% endif %}
+                  {% if step.tank_exists and not step.has_route %}· <span style="color: var(--red);">sem rota</span>{% endif %}
                 </div>
               </div>
             </div>
