@@ -42,8 +42,15 @@
     {% if alarms %}
       {% for alarm in alarms %}
       <div class="alarm-card alarm-{{ alarm.severity }}">
-        <strong>{{ alarm.severity|upper }}</strong>
-        <span>{{ alarm.message }}</span>
+        <span class="alarm-severity">{{ alarm.severity|upper }}</span>
+        <div class="alarm-body">
+          <div class="alarm-message">{{ alarm.message }}</div>
+          <div class="alarm-meta">
+            {% if alarm.tank_id %}<span>Tanque: <strong>{{ alarm.tank_id }}</strong></span>{% endif %}
+            {% if alarm.level_percent is not none %}<span>Nível: <strong>{{ alarm.level_percent }}%</strong></span>{% endif %}
+            {% if alarm.detected_at %}<span>Detectado: <strong class="alarm-detected" data-iso="{{ alarm.detected_at }}">{{ alarm.detected_at }}</strong></span>{% endif %}
+          </div>
+        </div>
       </div>
       {% endfor %}
     {% else %}
@@ -116,12 +123,25 @@ function renderAlarms(alarms) {
     return;
   }
 
-  alarmList.innerHTML = alarms.map(alarm => `
-    <div class="alarm-card alarm-${alarm.severity}">
-      <strong>${alarm.severity.toUpperCase()}</strong>
-      <span>${alarm.message}</span>
-    </div>
-  `).join("");
+  alarmList.innerHTML = alarms.map(alarm => {
+    const meta = [];
+    if (alarm.tank_id) meta.push(`<span>Tanque: <strong>${alarm.tank_id}</strong></span>`);
+    if (alarm.level_percent !== null && alarm.level_percent !== undefined) {
+      meta.push(`<span>Nível: <strong>${alarm.level_percent}%</strong></span>`);
+    }
+    if (alarm.detected_at) {
+      meta.push(`<span>Detectado: <strong>${formatDateTime(alarm.detected_at)}</strong></span>`);
+    }
+    return `
+      <div class="alarm-card alarm-${alarm.severity}">
+        <span class="alarm-severity">${alarm.severity.toUpperCase()}</span>
+        <div class="alarm-body">
+          <div class="alarm-message">${alarm.message}</div>
+          <div class="alarm-meta">${meta.join("")}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function getFreshnessLabel(isoString) {
@@ -189,6 +209,12 @@ function updateDashboard(data) {
   });
 }
 
+
+  document.querySelectorAll(".alarm-detected").forEach((el) => {
+    const iso = el.dataset.iso || el.textContent.trim();
+    el.dataset.iso = iso;
+    el.textContent = formatDateTime(iso);
+  });
 function formatInitialDates() {
   const stateLastUpdatedEl = document.getElementById("state-last-updated");
   if (stateLastUpdatedEl) {

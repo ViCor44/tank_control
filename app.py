@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from services.config_service import load_config, load_state, save_config
+from services.alarm_service import build_tank_alarms
 
 
 def enrich_tanks(tanks, tank_states):
@@ -62,7 +63,7 @@ def build_dashboard_data():
     tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
     sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
     routes = config.get("routes", [])
-    alarms = state.get("alarms", [])
+    alarms = build_tank_alarms(config, state)
 
     return {
         "tank_count": len(tanks),

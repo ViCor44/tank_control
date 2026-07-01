@@ -279,11 +279,42 @@ body {
 
 .alarm-card {
   display: flex;
-  gap: 12px;
-  align-items: center;
+  gap: 14px;
+  align-items: flex-start;
   border-radius: 12px;
   padding: 14px 16px;
   border: 1px solid;
+}
+
+.alarm-severity {
+  flex-shrink: 0;
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  align-self: center;
+}
+
+.alarm-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.alarm-message {
+  font-weight: 600;
+}
+
+.alarm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 12px;
+  opacity: 0.85;
 }
 
 .alarm-high {

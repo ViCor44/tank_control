@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from services.config_service import load_config, load_state
 from services.tank_service import get_tank_sensor_reading, calculate_tank_status
 from services.control_service import apply_tank_level_relays, apply_source_relays
+from services.alarm_service import build_tank_alarms
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -77,6 +78,7 @@ def update_tank_states():
 
     state = apply_tank_level_relays(config, state)
     state = apply_source_relays(config, state)
+    state["alarms"] = build_tank_alarms(config, state)
     state["state_last_updated"] = now_iso()
     save_state(state)
 
