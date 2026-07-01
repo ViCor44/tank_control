@@ -16,13 +16,48 @@
   box-sizing: border-box;
 }
 
+html, body {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
   display: flex;
-  min-height: 100vh;
+}
+
+/* Touch-friendly scrollbars (visible on 15" touch monitor) */
+*::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+  min-height: 40px;
+}
+
+*::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:active {
+  background: rgba(56, 189, 248, 0.7);
+  background-clip: content-box;
+}
+
+* {
+  scrollbar-width: auto;
+  scrollbar-color: rgba(148, 163, 184, 0.45) rgba(148, 163, 184, 0.08);
 }
 
 .sidebar {
@@ -30,6 +65,9 @@ body {
   background: #020617;
   border-right: 1px solid var(--line);
   padding: 24px 18px;
+  height: 100vh;
+  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .brand {
@@ -83,13 +121,33 @@ body {
 .content {
   flex: 1;
   padding: 28px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* Direct scrollable children of .content share remaining vertical space. */
+.content > .panel,
+.content > .card-grid {
+  flex: 0 1 auto;
+  min-height: 140px;
+  overflow-y: auto;
+  margin-bottom: 0;
+}
+
+.content > .page-header,
+.content > .stats-grid {
+  flex-shrink: 0;
 }
 
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .page-header h2 {
@@ -101,7 +159,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .stat-card {
@@ -134,7 +192,7 @@ body {
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .panel h3 {
