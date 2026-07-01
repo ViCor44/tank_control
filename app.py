@@ -155,6 +155,16 @@ def populate_source_from_form(source, form):
     return source
 
 
+def _parse_index(raw_value, length):
+    try:
+        index = int(raw_value)
+    except (TypeError, ValueError):
+        return None
+    if index < 0 or index >= length:
+        return None
+    return index
+
+
 def create_app():
     app = Flask(__name__)
 
@@ -320,7 +330,124 @@ def create_app():
     @app.route("/rules")
     def rules_page():
         config = load_config()
-        return render_template("rules.html", rules=config.get("rules", {}))
+        state = load_state()
+
+        tanks = config.get("tanks", [])
+        sources = config.get("sources", [])
+        tank_states = state.get("tanks", {})
+
+        available_tanks = [
+            {"id": t["id"], "name": t.get("name", t["id"])}
+            for t in tanks
+        ]
+
+        enriched_sources = []
+        for source in sources:
+            steps = []
+            for step in source.get("sequence", []):
+                tank_id = step.get("tank_id")
+                tank = get_tank_by_id(tanks, tank_id)
+                tank_state = tank_states.get(tank_id, {})
+                steps.append({
+                    "tank_id": tank_id,
+                    "tank_name": tank.get("name", tank_id) if tank else tank_id,
+                    "tank_exists": tank is not None,
+                    "enabled": step.get("enabled", True),
+                    "level_percent": tank_state.get("level_percent"),
+                    "status": tank_state.get("status", "unknown"),
+                })
+            enriched_sources.append({
+                "id": source.get("id"),
+                "name": source.get("name", source.get("id")),
+                "enabled": source.get("enabled", True),
+                "mode": source.get("mode", "sequence"),
+                "repeat_sequence": source.get("repeat_sequence", True),
+                "steps": steps,
+            })
+
+        return render_template(
+            "rules.html",
+            rules=config.get("rules", {}),
+            sources=enriched_sources,
+            available_tanks=available_tanks,
+        )
+
+    @app.route("/rules/flags", methods=["POST"])
+    def rules_flags():
+        config = load_config()
+        rules = config.setdefault("rules", {})
+        rule_keys = [
+            "allow_multiple_sources_per_tank",
+            "allow_multiple_tanks_per_source",
+            "skip_disabled_tanks",
+            "skip_full_tanks",
+            "prioritize_empty_tanks",
+        ]
+        for key in rule_keys:
+            rules[key] = request.form.get(key) == "on"
+
+        save_config(config)
+        return redirect(url_for("rules_page"))
+
+    @app.route("/rules/sources/<source_id>", methods=["POST"])
+    def rules_source_action(source_id):
+        config = load_config()
+        source = get_source_by_id(config.get("sources", []), source_id)
+
+        if source is None:
+            return "Source not found", 404
+
+        source.setdefault("sequence", [])
+        source.setdefault("mode", "sequence")
+        source.setdefault("repeat_sequence", True)
+
+        action = request.form.get("action", "").strip()
+        sequence = source["sequence"]
+
+        if action == "add_tank":
+            tank_id = request.form.get("tank_id", "").strip()
+            if not tank_id:
+                return "tank_id is required", 400
+            if get_tank_by_id(config.get("tanks", []), tank_id) is None:
+                return "Tank not found", 404
+            sequence.append({"tank_id": tank_id, "enabled": True})
+
+        elif action == "remove_step":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None:
+                return "Invalid index", 400
+            sequence.pop(index)
+
+        elif action == "move_up":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None or index == 0:
+                return redirect(url_for("rules_page"))
+            sequence[index - 1], sequence[index] = sequence[index], sequence[index - 1]
+
+        elif action == "move_down":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None or index >= len(sequence) - 1:
+                return redirect(url_for("rules_page"))
+            sequence[index + 1], sequence[index] = sequence[index], sequence[index + 1]
+
+        elif action == "toggle_step":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None:
+                return "Invalid index", 400
+            sequence[index]["enabled"] = not sequence[index].get("enabled", True)
+
+        elif action == "update_settings":
+            source["repeat_sequence"] = request.form.get("repeat_sequence") == "on"
+            source["enabled"] = request.form.get("enabled") == "on"
+            mode = request.form.get("mode", "sequence").strip()
+            if mode in ("sequence", "manual"):
+                source["mode"] = mode
+
+        else:
+            return "Unknown action", 400
+
+        save_config(config)
+        return redirect(url_for("rules_page"))
 
     @app.route("/settings")
     def settings_page():

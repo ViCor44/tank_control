@@ -4,24 +4,162 @@
 
 {% block content %}
 <div class="page-header">
-  <h2>Regras</h2>
-  <span class="badge badge-blue">Motor lógico</span>
+  <div>
+    <h2>Regras</h2>
+    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <span class="badge badge-blue">Sequências e motor lógico</span>
+    </div>
+  </div>
 </div>
 
 <div class="panel">
-  <div class="card-grid">
-    {% for key, value in rules.items() %}
-    <div class="scada-card">
-      <div class="card-top">
-        <h4>{{ key }}</h4>
-        {% if value %}
-          <span class="badge badge-green">true</span>
+  <h3>Sequências por fonte</h3>
+  <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
+    Cada fonte enche os tanques pela ordem definida. Com <em>skip full tanks</em> ativo, quando o
+    tanque atual estiver cheio a fonte avança para o próximo da lista.
+  </p>
+
+  <div class="sequence-list">
+    {% for source in sources %}
+    <div class="sequence-source">
+      <div class="sequence-source-header">
+        <div>
+          <h4 style="margin: 0;">
+            {{ source.name }}
+            <span class="badge {{ 'badge-green' if source.enabled else 'badge-red' }}">
+              {{ 'ativa' if source.enabled else 'inativa' }}
+            </span>
+          </h4>
+          <div style="color: var(--muted); font-size: 13px; margin-top: 4px;">
+            ID: <strong>{{ source.id }}</strong> ·
+            Modo: <strong>{{ source.mode }}</strong> ·
+            Repetir: <strong>{{ 'sim' if source.repeat_sequence else 'não' }}</strong>
+          </div>
+        </div>
+
+        <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-settings">
+          <input type="hidden" name="action" value="update_settings">
+          <label class="inline-check">
+            <input type="checkbox" name="enabled" {% if source.enabled %}checked{% endif %}>
+            Ativa
+          </label>
+          <label class="inline-check">
+            <input type="checkbox" name="repeat_sequence" {% if source.repeat_sequence %}checked{% endif %}>
+            Repetir sequência
+          </label>
+          <label class="inline-check">
+            Modo:
+            <select name="mode">
+              <option value="sequence" {% if source.mode == 'sequence' %}selected{% endif %}>sequence</option>
+              <option value="manual" {% if source.mode == 'manual' %}selected{% endif %}>manual</option>
+            </select>
+          </label>
+          <button type="submit" class="action-button action-button-small">Guardar</button>
+        </form>
+      </div>
+
+      <div class="sequence-chain">
+        <div class="sequence-source-pill">{{ source.name }}</div>
+
+        {% if source.steps %}
+          {% for step in source.steps %}
+          <div class="sequence-arrow">→</div>
+          <div class="sequence-step {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %}">
+            <div class="sequence-step-header">
+              <span class="sequence-step-index">{{ loop.index }}</span>
+              <div>
+                <div class="sequence-step-name">{{ step.tank_name }}</div>
+                <div class="sequence-step-meta">
+                  {{ step.tank_id }}
+                  {% if step.level_percent is not none %}· {{ step.level_percent }}%{% endif %}
+                  {% if step.status and step.status != 'unknown' %}
+                  · <span class="badge-status-{{ step.status }} sequence-status-badge">{{ step.status }}</span>
+                  {% endif %}
+                  {% if not step.tank_exists %}· <span style="color: var(--red);">tanque não existe</span>{% endif %}
+                </div>
+              </div>
+            </div>
+
+            <div class="sequence-step-actions">
+              <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}">
+                <input type="hidden" name="action" value="move_up">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="icon-button" title="Subir" {% if loop.first %}disabled{% endif %}>↑</button>
+              </form>
+              <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}">
+                <input type="hidden" name="action" value="move_down">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="icon-button" title="Descer" {% if loop.last %}disabled{% endif %}>↓</button>
+              </form>
+              <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}">
+                <input type="hidden" name="action" value="toggle_step">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="icon-button" title="{{ 'Desativar' if step.enabled else 'Ativar' }}">
+                  {{ '⏸' if step.enabled else '▶' }}
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}">
+                <input type="hidden" name="action" value="remove_step">
+                <input type="hidden" name="index" value="{{ loop.index0 }}">
+                <button type="submit" class="icon-button icon-button-danger" title="Remover">✕</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+
+          {% if source.repeat_sequence %}
+          <div class="sequence-arrow sequence-loop">↻</div>
+          {% endif %}
         {% else %}
-          <span class="badge badge-red">false</span>
+          <div class="sequence-arrow">→</div>
+          <div class="sequence-empty">Sem tanques na sequência</div>
         {% endif %}
       </div>
+
+      <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-add">
+        <input type="hidden" name="action" value="add_tank">
+        <label for="add-tank-{{ source.id }}">Adicionar tanque ao final:</label>
+        <select id="add-tank-{{ source.id }}" name="tank_id" required>
+          <option value="" disabled selected>Escolher…</option>
+          {% for tank in available_tanks %}
+          <option value="{{ tank.id }}">{{ tank.name }} ({{ tank.id }})</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="action-button action-button-small">+ Adicionar</button>
+      </form>
     </div>
+    {% else %}
+    <p>Sem fontes configuradas.</p>
     {% endfor %}
   </div>
+</div>
+
+<div class="panel">
+  <h3>Motor lógico (flags globais)</h3>
+  <form method="post" action="{{ url_for('rules_flags') }}" class="rules-flags-form">
+    <label class="inline-check">
+      <input type="checkbox" name="allow_multiple_sources_per_tank" {% if rules.allow_multiple_sources_per_tank %}checked{% endif %}>
+      Permitir múltiplas fontes por tanque
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="allow_multiple_tanks_per_source" {% if rules.allow_multiple_tanks_per_source %}checked{% endif %}>
+      Permitir múltiplos tanques por fonte
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="skip_disabled_tanks" {% if rules.skip_disabled_tanks %}checked{% endif %}>
+      Saltar tanques desativados
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="skip_full_tanks" {% if rules.skip_full_tanks %}checked{% endif %}>
+      Saltar quando o tanque atual estiver cheio (avançar para o próximo)
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="prioritize_empty_tanks" {% if rules.prioritize_empty_tanks %}checked{% endif %}>
+      Priorizar tanques vazios
+    </label>
+    <div>
+      <button type="submit" class="action-button">Guardar regras</button>
+    </div>
+  </form>
 </div>
 {% endblock %}

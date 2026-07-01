@@ -485,3 +485,238 @@ body {
   gap: 12px;
   margin-top: 10px;
 }
+
+/* ============ Rules / Sequence editor ============ */
+
+.sequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.sequence-source {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sequence-source-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sequence-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.sequence-settings select {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+.inline-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.inline-check input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.sequence-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding: 6px 2px 2px;
+}
+
+.sequence-source-pill {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  border-radius: 999px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.sequence-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--muted);
+  font-size: 22px;
+  font-weight: bold;
+  padding: 0 4px;
+}
+
+.sequence-arrow.sequence-loop {
+  color: var(--blue);
+  font-size: 24px;
+}
+
+.sequence-step {
+  min-width: 180px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sequence-step-disabled {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.sequence-step-missing {
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.sequence-step-header {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.sequence-step-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  font-weight: bold;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.sequence-step-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.sequence-step-meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.sequence-status-badge {
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.sequence-step-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.sequence-step-actions form {
+  margin: 0;
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.icon-button:hover:not(:disabled) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.icon-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.icon-button-danger:hover:not(:disabled) {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.sequence-empty {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+.sequence-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+
+.sequence-add label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.sequence-add select {
+  background: #0b1220;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  min-width: 200px;
+}
+
+.action-button-small {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.rules-flags-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
