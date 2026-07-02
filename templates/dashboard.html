@@ -70,12 +70,12 @@
       </div>
 
       <div class="tank-activity" id="tank-activity-{{ tank.id }}">
-        {% if tank.filling_by_name %}
-        <span class="badge badge-filling" id="tank-filling-{{ tank.id }}">
-          <span class="pulse-dot"></span> A encher por {{ tank.filling_by_name }}
-        </span>
-        {% else %}
-        <span class="badge badge-idle" id="tank-filling-{{ tank.id }}" style="display:none;"></span>
+        {% if tank.filling_by_sources %}
+          {% for s in tank.filling_by_sources %}
+          <span class="badge badge-filling">
+            <span class="pulse-dot"></span> A encher por {{ s.name }}
+          </span>
+          {% endfor %}
         {% endif %}
       </div>
 
@@ -204,7 +204,7 @@ function updateDashboard(data) {
     const statusEl = document.getElementById(`tank-status-${tank.id}`);
     const fillEl = document.getElementById(`tank-fill-${tank.id}`);
     const lastUpdateEl = document.getElementById(`tank-last-update-${tank.id}`);
-    const fillingEl = document.getElementById(`tank-filling-${tank.id}`);
+    const activityEl = document.getElementById(`tank-activity-${tank.id}`);
 
     if (percentEl) percentEl.textContent = `${tank.level_percent}%`;
     if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
@@ -213,14 +213,14 @@ function updateDashboard(data) {
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
 
-    if (fillingEl) {
-      if (tank.filling_by_name) {
-        fillingEl.className = "badge badge-filling";
-        fillingEl.innerHTML = `<span class="pulse-dot"></span> A encher por ${tank.filling_by_name}`;
-        fillingEl.style.display = "";
+    if (activityEl) {
+      const sources = tank.filling_by_sources || [];
+      if (sources.length > 0) {
+        activityEl.innerHTML = sources.map(s =>
+          `<span class="badge badge-filling"><span class="pulse-dot"></span> A encher por ${s.name}</span>`
+        ).join("");
       } else {
-        fillingEl.style.display = "none";
-        fillingEl.innerHTML = "";
+        activityEl.innerHTML = "";
       }
     }
 

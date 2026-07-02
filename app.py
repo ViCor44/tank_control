@@ -36,6 +36,7 @@ def enrich_tanks(tanks, tank_states):
             "last_update": state.get("last_update"),
             "filling_by": state.get("filling_by"),
             "filling_by_name": state.get("filling_by_name"),
+            "filling_by_sources": state.get("filling_by_sources", []) or [],
             "relay_empty_on": bool(state.get("relay_empty_on", False)),
             "relay_full_on": bool(state.get("relay_full_on", False)),
         })

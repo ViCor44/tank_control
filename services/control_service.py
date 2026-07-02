@@ -210,6 +210,7 @@ def apply_source_relays(config, state):
     for ts in tank_states.values():
         ts["filling_by"] = None
         ts["filling_by_name"] = None
+        ts["filling_by_sources"] = []
 
     routes_by_source = {}
     for route in config.get("routes", []):
@@ -303,8 +304,14 @@ def apply_source_relays(config, state):
         current_tank_id = source_state.get("current_tank_id")
         if applied_active and current_tank_id:
             ts = tank_states.setdefault(current_tank_id, {})
-            ts["filling_by"] = source_id
-            ts["filling_by_name"] = source.get("name", source_id)
+            sources_list = ts.setdefault("filling_by_sources", [])
+            entry = {"id": source_id, "name": source.get("name", source_id)}
+            if entry not in sources_list:
+                sources_list.append(entry)
+            # Backward-compat scalar fields = first source
+            if not ts.get("filling_by"):
+                ts["filling_by"] = source_id
+                ts["filling_by_name"] = source.get("name", source_id)
 
         source_state["active"] = applied_active
         source_state["last_update"] = now_iso()

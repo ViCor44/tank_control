@@ -290,6 +290,9 @@ body {
 .tank-activity {
   margin: 6px 0 10px;
   min-height: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .badge-status-normal {
