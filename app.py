@@ -466,10 +466,23 @@ def create_app():
         ]
 
         enriched_sources = []
+        source_states = state.get("sources", {})
         for source in sources:
             source_id = source.get("id")
+            src_state = source_states.get(source_id, {})
+            current_step_index = src_state.get("current_step_index")
+            source_status = src_state.get("status", "idle")
+            source_active = bool(src_state.get("active", False))
+            source_target_reason = src_state.get("target_reason")
+            source_blocked_by_id = src_state.get("blocked_by")
+            source_blocked_by_name = None
+            if source_blocked_by_id:
+                blocking_source = get_source_by_id(sources, source_blocked_by_id)
+                if blocking_source:
+                    source_blocked_by_name = blocking_source.get("name", source_blocked_by_id)
+
             steps = []
-            for step in source.get("sequence", []):
+            for step_index, step in enumerate(source.get("sequence", [])):
                 tank_id = step.get("tank_id")
                 tank = get_tank_by_id(tanks, tank_id)
                 tank_state = tank_states.get(tank_id, {})
@@ -483,6 +496,8 @@ def create_app():
                     "level_percent": tank_state.get("level_percent"),
                     "status": tank_state.get("status", "unknown"),
                     "has_route": has_route,
+                    "is_current": (current_step_index == step_index) and source_active,
+                    "is_target": (current_step_index == step_index) and not source_active,
                 })
             enriched_sources.append({
                 "id": source_id,
@@ -491,6 +506,12 @@ def create_app():
                 "mode": source.get("mode", "sequence"),
                 "repeat_sequence": source.get("repeat_sequence", True),
                 "steps": steps,
+                "runtime_status": source_status,
+                "active": source_active,
+                "target_reason": source_target_reason,
+                "blocked_by_name": source_blocked_by_name,
+                "current_tank_name": src_state.get("current_tank_name"),
+                "current_route_relay": src_state.get("current_route_relay", 0),
             })
 
         return render_template(
