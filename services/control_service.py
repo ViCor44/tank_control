@@ -25,6 +25,109 @@ def _decide_empty_relay(distance_cm, distance_empty_cm, hysteresis_cm, previous_
     return distance_cm >= distance_empty_cm
 
 
+def _build_route_lookup(config):
+    lookup = {}
+    for route in config.get("routes", []):
+        key = (route.get("source_id"), route.get("tank_id"))
+        lookup[key] = route
+    return lookup
+
+
+def _tank_by_id(config, tank_id):
+    for tank in config.get("tanks", []):
+        if tank.get("id") == tank_id:
+            return tank
+    return None
+
+
+def compute_source_targets(config, state):
+    """Decide, per source, which sequence step should be active now.
+
+    Writes the following keys on each source_state:
+      - current_tank_id: id of tank being served (or None)
+      - current_tank_name
+      - current_step_index
+      - current_route_relay: valve relay for the selected route (or 0)
+      - desired_active: True if a target was found and enabled_relay > 0
+      - target_reason: short string ("target"|"no_step"|"disabled"|"no_route"|"blocked")
+    """
+    rules = config.get("rules", {})
+    skip_full = bool(rules.get("skip_full_tanks", True))
+    skip_disabled_tanks = bool(rules.get("skip_disabled_tanks", True))
+    allow_multi_sources_per_tank = bool(rules.get("allow_multiple_sources_per_tank", False))
+
+    tank_states = state.get("tanks", {})
+    source_states = state.setdefault("sources", {})
+
+    route_lookup = _build_route_lookup(config)
+    claimed_tanks = set()
+
+    for source in config.get("sources", []):
+        source_id = source.get("id")
+        source_state = source_states.setdefault(source_id, {})
+
+        source_state["current_tank_id"] = None
+        source_state["current_tank_name"] = None
+        source_state["current_step_index"] = None
+        source_state["current_route_relay"] = 0
+        source_state["desired_active"] = False
+        source_state["target_reason"] = "idle"
+
+        if not source.get("enabled", False):
+            source_state["target_reason"] = "disabled"
+            continue
+
+        sequence = source.get("sequence", []) or []
+
+        for idx, step in enumerate(sequence):
+            if not step.get("enabled", True):
+                continue
+
+            tank_id = step.get("tank_id")
+            tank = _tank_by_id(config, tank_id)
+            if tank is None:
+                continue
+
+            if skip_disabled_tanks and not tank.get("enabled", False):
+                continue
+
+            tank_state = tank_states.get(tank_id, {})
+            status = tank_state.get("status")
+            sensor_ok = tank_state.get("sensor_ok", False)
+
+            if not sensor_ok:
+                # can't decide; skip
+                continue
+
+            if skip_full and status == "full":
+                continue
+
+            if not allow_multi_sources_per_tank and tank_id in claimed_tanks:
+                source_state["target_reason"] = "blocked"
+                continue
+
+            route = route_lookup.get((source_id, tank_id))
+            if route is None or not route.get("enabled", True):
+                source_state["target_reason"] = "no_route"
+                continue
+
+            valve_relay = int(route.get("valve_relay", 0) or 0)
+
+            source_state["current_tank_id"] = tank_id
+            source_state["current_tank_name"] = tank.get("name", tank_id)
+            source_state["current_step_index"] = idx
+            source_state["current_route_relay"] = valve_relay
+            source_state["desired_active"] = True
+            source_state["target_reason"] = "target"
+            claimed_tanks.add(tank_id)
+            break
+        else:
+            if source_state["target_reason"] == "idle":
+                source_state["target_reason"] = "no_step"
+
+    return state
+
+
 def apply_tank_level_relays(config, state):
     relay_service = build_relay_board_service(config)
     tanks = config.get("tanks", [])
@@ -84,12 +187,25 @@ def apply_tank_level_relays(config, state):
 
 
 def apply_source_relays(config, state):
+    """Apply source enable relays + route valve relays based on sequencer decision."""
+    compute_source_targets(config, state)
+
     relay_service = build_relay_board_service(config)
     sources = config.get("sources", [])
     source_states = state.setdefault("sources", {})
+    tank_states = state.setdefault("tanks", {})
     system = config.get("system", {})
     default_start_delay = float(system.get("default_source_startup_delay_seconds", 0) or 0)
     default_stop_delay = float(system.get("default_source_stop_delay_seconds", 0) or 0)
+
+    # Clear filling markers on every cycle before we set new ones.
+    for ts in tank_states.values():
+        ts["filling_by"] = None
+        ts["filling_by_name"] = None
+
+    routes_by_source = {}
+    for route in config.get("routes", []):
+        routes_by_source.setdefault(route.get("source_id"), []).append(route)
 
     now = datetime.now(timezone.utc)
     relay_results = []
@@ -98,6 +214,7 @@ def apply_source_relays(config, state):
         source_id = source.get("id")
         source_state = source_states.setdefault(source_id, {})
         enable_relay = source.get("enable_relay", source.get("valve_relay", 0)) or 0
+        source_routes = routes_by_source.get(source_id, [])
 
         if not source.get("enabled", False):
             source_state["active"] = False
@@ -106,9 +223,13 @@ def apply_source_relays(config, state):
             source_state["desired_active_since"] = None
             if enable_relay > 0:
                 relay_results.append(relay_service.relay_off(enable_relay))
+            for route in source_routes:
+                vr = int(route.get("valve_relay", 0) or 0)
+                if vr > 0:
+                    relay_results.append(relay_service.relay_off(vr))
             continue
 
-        desired_active = bool(source_state.get("desired_active", source_state.get("active", False)))
+        desired_active = bool(source_state.get("desired_active", False))
         current_active = bool(source_state.get("active", False))
         startup_delay = float(source.get("startup_delay_seconds", default_start_delay) or 0)
         stop_delay = float(source.get("stop_delay_seconds", default_stop_delay) or 0)
@@ -134,15 +255,48 @@ def apply_source_relays(config, state):
         else:
             source_state["desired_active_since"] = None
 
+        current_route_relay = int(source_state.get("current_route_relay", 0) or 0)
+
+        # Route valves: only the currently-selected route is on (and only while pumping).
+        for route in source_routes:
+            vr = int(route.get("valve_relay", 0) or 0)
+            if vr <= 0:
+                continue
+            if applied_active and vr == current_route_relay:
+                relay_results.append(relay_service.relay_on(vr))
+            else:
+                relay_results.append(relay_service.relay_off(vr))
+
+        # Source enable relay
         if enable_relay > 0:
             if applied_active:
                 relay_results.append(relay_service.relay_on(enable_relay))
-                source_state["status"] = "active"
             else:
                 relay_results.append(relay_service.relay_off(enable_relay))
-                source_state["status"] = "waiting" if desired_active != applied_active else "idle"
-        else:
+
+        # Status derivation for UI
+        reason = source_state.get("target_reason", "idle")
+        if enable_relay <= 0:
             source_state["status"] = "no_relay"
+        elif applied_active:
+            source_state["status"] = "active"
+        elif desired_active and not applied_active:
+            source_state["status"] = "waiting"
+        elif reason == "blocked":
+            source_state["status"] = "blocked"
+        elif reason == "no_route":
+            source_state["status"] = "no_route"
+        elif reason in ("no_step", "idle"):
+            source_state["status"] = "idle"
+        else:
+            source_state["status"] = "idle"
+
+        # Mark filling target on the tank state (only if we're actually pumping)
+        current_tank_id = source_state.get("current_tank_id")
+        if applied_active and current_tank_id:
+            ts = tank_states.setdefault(current_tank_id, {})
+            ts["filling_by"] = source_id
+            ts["filling_by_name"] = source.get("name", source_id)
 
         source_state["active"] = applied_active
         source_state["last_update"] = now_iso()

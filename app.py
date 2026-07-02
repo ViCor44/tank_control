@@ -33,7 +33,11 @@ def enrich_tanks(tanks, tank_states):
             "volume_liters": volume_liters,
             "volume_m3": volume_m3,
             "sensor_ok": state.get("sensor_ok", False),
-            "last_update": state.get("last_update")
+            "last_update": state.get("last_update"),
+            "filling_by": state.get("filling_by"),
+            "filling_by_name": state.get("filling_by_name"),
+            "relay_empty_on": bool(state.get("relay_empty_on", False)),
+            "relay_full_on": bool(state.get("relay_full_on", False)),
         })
 
     return enriched
@@ -48,6 +52,9 @@ def enrich_sources(sources, source_states):
             **source,
             "active": state.get("active", False),
             "status": state.get("status", "idle"),
+            "current_tank_id": state.get("current_tank_id"),
+            "current_tank_name": state.get("current_tank_name"),
+            "target_reason": state.get("target_reason"),
             "last_update": state.get("last_update")
         })
 

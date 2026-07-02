@@ -69,6 +69,16 @@
         <span class="badge badge-status-{{ tank.status }}" id="tank-status-{{ tank.id }}">{{ tank.status }}</span>
       </div>
 
+      <div class="tank-activity" id="tank-activity-{{ tank.id }}">
+        {% if tank.filling_by_name %}
+        <span class="badge badge-filling" id="tank-filling-{{ tank.id }}">
+          <span class="pulse-dot"></span> A encher por {{ tank.filling_by_name }}
+        </span>
+        {% else %}
+        <span class="badge badge-idle" id="tank-filling-{{ tank.id }}" style="display:none;"></span>
+        {% endif %}
+      </div>
+
       <div class="tank-level">
         <div class="tank-bar">
           <div class="tank-fill status-{{ tank.status }}" id="tank-fill-{{ tank.id }}" style="height: {{ tank.level_percent }}%;"></div>
@@ -194,6 +204,7 @@ function updateDashboard(data) {
     const statusEl = document.getElementById(`tank-status-${tank.id}`);
     const fillEl = document.getElementById(`tank-fill-${tank.id}`);
     const lastUpdateEl = document.getElementById(`tank-last-update-${tank.id}`);
+    const fillingEl = document.getElementById(`tank-filling-${tank.id}`);
 
     if (percentEl) percentEl.textContent = `${tank.level_percent}%`;
     if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
@@ -201,6 +212,17 @@ function updateDashboard(data) {
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
+
+    if (fillingEl) {
+      if (tank.filling_by_name) {
+        fillingEl.className = "badge badge-filling";
+        fillingEl.innerHTML = `<span class="pulse-dot"></span> A encher por ${tank.filling_by_name}`;
+        fillingEl.style.display = "";
+      } else {
+        fillingEl.style.display = "none";
+        fillingEl.innerHTML = "";
+      }
+    }
 
     if (lastUpdateEl) {
       lastUpdateEl.dataset.iso = tank.last_update || "";
