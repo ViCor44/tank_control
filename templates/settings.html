@@ -4,29 +4,191 @@
 
 {% block content %}
 <div class="page-header">
-  <h2>Configuração</h2>
-  <span class="badge badge-blue">Sistema</span>
-</div>
-
-<div class="panel">
-  <h3>System</h3>
-  <div class="card-grid">
-    {% for key, value in system.items() %}
-    <div class="scada-card">
-      <p><strong>{{ key }}:</strong> {{ value }}</p>
+  <div>
+    <h2>Configuração</h2>
+    <div style="margin-top: 8px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <span class="badge badge-blue">Sistema</span>
+      <span class="badge badge-blue">{{ boards|length }} módulo(s) · {{ total_relays }} relés no total</span>
     </div>
-    {% endfor %}
   </div>
 </div>
 
 <div class="panel">
-  <h3>Relay Board</h3>
-  <div class="card-grid">
-    {% for key, value in relay_board.items() %}
-    <div class="scada-card">
-      <p><strong>{{ key }}:</strong> {{ value }}</p>
+  <h3>Tempos e defaults do sistema</h3>
+  <form method="post" action="{{ url_for('save_system_settings') }}" class="form-grid">
+
+    <div class="form-group">
+      <label for="poll_interval_seconds">Intervalo de leitura dos sensores (s)
+        <small style="color: var(--muted); font-weight: normal;">— o poller lê e decide a cada X segundos</small>
+      </label>
+      <input id="poll_interval_seconds" type="number" step="0.5" min="1" name="poll_interval_seconds"
+             value="{{ system.poll_interval_seconds if system.poll_interval_seconds is not none else 10 }}">
     </div>
+
+    <div class="form-group">
+      <label for="decision_interval_seconds">Intervalo de decisão (s)
+        <small style="color: var(--muted); font-weight: normal;">— cadência lógica do motor</small>
+      </label>
+      <input id="decision_interval_seconds" type="number" step="0.5" min="1" name="decision_interval_seconds"
+             value="{{ system.decision_interval_seconds if system.decision_interval_seconds is not none else 5 }}">
+    </div>
+
+    <div class="form-group">
+      <label for="sensor_request_timeout_seconds">Timeout de sensor HTTP (s)</label>
+      <input id="sensor_request_timeout_seconds" type="number" step="0.1" min="0.1" name="sensor_request_timeout_seconds"
+             value="{{ system.sensor_request_timeout_seconds if system.sensor_request_timeout_seconds is not none else 2 }}">
+    </div>
+
+    <div class="form-group">
+      <label for="default_hysteresis_cm">Histerese por defeito (cm)
+        <small style="color: var(--muted); font-weight: normal;">— margem em cm para vazio/cheio; cada tanque pode ter override</small>
+      </label>
+      <input id="default_hysteresis_cm" type="number" step="0.5" min="0" name="default_hysteresis_cm"
+             value="{{ system.default_hysteresis_cm if system.default_hysteresis_cm is not none else 0 }}">
+    </div>
+
+    <div class="form-group">
+      <label for="default_source_startup_delay_seconds">Delay de arranque de fontes (s) — default</label>
+      <input id="default_source_startup_delay_seconds" type="number" step="0.5" min="0"
+             name="default_source_startup_delay_seconds"
+             value="{{ system.default_source_startup_delay_seconds if system.default_source_startup_delay_seconds is not none else 0 }}">
+    </div>
+
+    <div class="form-group">
+      <label for="default_source_stop_delay_seconds">Delay de paragem de fontes (s) — default</label>
+      <input id="default_source_stop_delay_seconds" type="number" step="0.5" min="0"
+             name="default_source_stop_delay_seconds"
+             value="{{ system.default_source_stop_delay_seconds if system.default_source_stop_delay_seconds is not none else 0 }}">
+    </div>
+
+    <div class="form-group checkbox-group form-group-full">
+      <label>
+        <input type="checkbox" name="safe_mode_on_error" {% if system.safe_mode_on_error %}checked{% endif %}>
+        Safe mode em erro (desliga tudo se algo falhar)
+      </label>
+    </div>
+
+    <div class="form-actions form-group-full">
+      <button type="submit" class="action-button">Guardar sistema</button>
+    </div>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>Módulos de relés</h3>
+  <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
+    Cada módulo Modbus TCP fornece um bloco contíguo de relés. Podes adicionar módulos extra —
+    os relés são numerados globalmente por ordem: o módulo 1 fica com <strong>1..N</strong>, o
+    módulo 2 continua a partir daí, etc.
+  </p>
+
+  <div class="sequence-list">
+    {% for board in boards %}
+    <div class="sequence-source">
+      <div class="sequence-source-header">
+        <div>
+          <h4 style="margin: 0;">{{ board.name }}</h4>
+          <div style="color: var(--muted); font-size: 13px; margin-top: 4px;">
+            id: <strong>{{ board.id }}</strong> ·
+            relés <strong>{{ board.start_relay }}..{{ board.end_relay }}</strong> ·
+            {{ board.used_channels }}/{{ board.channels }} em uso
+          </div>
+        </div>
+      </div>
+
+      <form method="post" action="{{ url_for('update_relay_board', board_id=board.id) }}" class="form-grid">
+        <input type="hidden" name="action" value="update">
+
+        <div class="form-group">
+          <label for="name-{{ board.id }}">Nome</label>
+          <input id="name-{{ board.id }}" type="text" name="name" value="{{ board.name }}">
+        </div>
+
+        <div class="form-group">
+          <label for="type-{{ board.id }}">Tipo</label>
+          <input id="type-{{ board.id }}" type="text" name="type" value="{{ board.type }}">
+        </div>
+
+        <div class="form-group">
+          <label for="host-{{ board.id }}">Host / IP</label>
+          <input id="host-{{ board.id }}" type="text" name="host" value="{{ board.host }}">
+        </div>
+
+        <div class="form-group">
+          <label for="port-{{ board.id }}">Porto</label>
+          <input id="port-{{ board.id }}" type="number" min="1" max="65535" name="port" value="{{ board.port }}">
+        </div>
+
+        <div class="form-group">
+          <label for="unit-{{ board.id }}">Unit ID</label>
+          <input id="unit-{{ board.id }}" type="number" min="1" name="unit_id" value="{{ board.unit_id }}">
+        </div>
+
+        <div class="form-group">
+          <label for="channels-{{ board.id }}">Nº de canais / relés</label>
+          <input id="channels-{{ board.id }}" type="number" min="1" name="channels" value="{{ board.channels }}">
+        </div>
+
+        <div class="form-actions form-group-full">
+          <button type="submit" class="action-button action-button-small">Guardar módulo</button>
+        </div>
+      </form>
+
+      <form method="post" action="{{ url_for('update_relay_board', board_id=board.id) }}" style="text-align: right;">
+        <input type="hidden" name="action" value="delete">
+        <button type="submit" class="icon-button icon-button-danger" title="Remover módulo">✕ Remover módulo</button>
+      </form>
+    </div>
+    {% else %}
+    <p>Nenhum módulo configurado.</p>
     {% endfor %}
+  </div>
+
+  <div class="sequence-source" style="margin-top: 20px;">
+    <div class="sequence-source-header">
+      <h4 style="margin: 0;">+ Adicionar módulo</h4>
+    </div>
+
+    <form method="post" action="{{ url_for('add_relay_board') }}" class="form-grid">
+      <div class="form-group">
+        <label for="new-id">ID (único, ex: <em>board2</em>)</label>
+        <input id="new-id" type="text" name="id" required>
+      </div>
+
+      <div class="form-group">
+        <label for="new-name">Nome</label>
+        <input id="new-name" type="text" name="name" placeholder="Ex: Módulo secundário">
+      </div>
+
+      <div class="form-group">
+        <label for="new-type">Tipo</label>
+        <input id="new-type" type="text" name="type" value="waveshare_modbus_eth_relay_30ch">
+      </div>
+
+      <div class="form-group">
+        <label for="new-host">Host / IP</label>
+        <input id="new-host" type="text" name="host" placeholder="192.168.63.141" required>
+      </div>
+
+      <div class="form-group">
+        <label for="new-port">Porto</label>
+        <input id="new-port" type="number" name="port" min="1" max="65535" value="502">
+      </div>
+
+      <div class="form-group">
+        <label for="new-unit">Unit ID</label>
+        <input id="new-unit" type="number" name="unit_id" min="1" value="1">
+      </div>
+
+      <div class="form-group">
+        <label for="new-channels">Nº de canais</label>
+        <input id="new-channels" type="number" name="channels" min="1" value="30" required>
+      </div>
+
+      <div class="form-actions form-group-full">
+        <button type="submit" class="action-button">+ Adicionar módulo</button>
+      </div>
+    </form>
   </div>
 </div>
 {% endblock %}

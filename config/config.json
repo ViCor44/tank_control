@@ -2,14 +2,24 @@
   "system": {
     "decision_interval_seconds": 5,
     "safe_mode_on_error": true,
-    "sensor_request_timeout_seconds": 2
+    "sensor_request_timeout_seconds": 2,
+    "poll_interval_seconds": 10,
+    "default_hysteresis_cm": 10,
+    "default_source_startup_delay_seconds": 0,
+    "default_source_stop_delay_seconds": 0
   },
-  "relay_board": {
-    "type": "waveshare_modbus_eth_relay_30ch",
-    "host": "192.168.63.140",
-    "port": 502,
-    "unit_id": 1
-  },
+  "relay_boards": [
+    {
+      "id": "board1",
+      "name": "Módulo principal",
+      "type": "waveshare_modbus_eth_relay_30ch",
+      "host": "192.168.63.140",
+      "port": 502,
+      "unit_id": 1,
+      "channels": 30,
+      "start_relay": 1
+    }
+  ],
   "tanks": [
     {
       "id": "T1",

@@ -2,7 +2,12 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from services.config_service import load_config, load_state, save_config
 from services.alarm_service import build_tank_alarms
-from services.relay_inventory import get_available_relay_options, get_used_relays
+from services.relay_inventory import (
+    get_available_relay_options,
+    get_used_relays,
+    get_relay_boards,
+    get_relay_count,
+)
 
 
 def enrich_tanks(tanks, tank_states):
@@ -100,6 +105,7 @@ def build_empty_tank():
             "empty_percent": 15,
             "full_percent": 90
         },
+        "hysteresis_cm": 0,
         "relays": {
             "empty": 0,
             "full": 0
@@ -112,7 +118,9 @@ def build_empty_source():
         "id": "",
         "name": "",
         "enabled": True,
-        "enable_relay": 0
+        "enable_relay": 0,
+        "startup_delay_seconds": 0,
+        "stop_delay_seconds": 0
     }
 
 
@@ -140,6 +148,8 @@ def populate_tank_from_form(tank, form):
         "full_percent": int(form.get("full_percent", 0)),
     }
 
+    tank["hysteresis_cm"] = float(form.get("hysteresis_cm", 0) or 0)
+
     tank["relays"] = {
         "empty": int(form.get("relay_empty", 0) or 0),
         "full": int(form.get("relay_full", 0) or 0),
@@ -153,6 +163,8 @@ def populate_source_from_form(source, form):
     source["name"] = form.get("name", "").strip()
     source["enabled"] = form.get("enabled") == "on"
     source["enable_relay"] = int(form.get("enable_relay", 0) or 0)
+    source["startup_delay_seconds"] = float(form.get("startup_delay_seconds", 0) or 0)
+    source["stop_delay_seconds"] = float(form.get("stop_delay_seconds", 0) or 0)
     return source
 
 
@@ -212,6 +224,28 @@ def _validate_route_relay(config, route):
     if relay in used:
         return f"Relé {relay} já está em uso"
     return None
+
+
+def _normalized_boards_list(config):
+    """Return editable list of boards. Migrates legacy relay_board into relay_boards."""
+    if "relay_boards" in config and config["relay_boards"]:
+        return config["relay_boards"]
+    boards = get_relay_boards(config)
+    return list(boards)
+
+
+def _next_start_relay(boards):
+    if not boards:
+        return 1
+    last = boards[-1]
+    return int(last.get("start_relay", 1)) + int(last.get("channels", 0))
+
+
+def _recompute_start_relays(boards):
+    offset = 1
+    for board in boards:
+        board["start_relay"] = offset
+        offset += int(board.get("channels", 0))
 
 
 def create_app():
@@ -662,11 +696,165 @@ def create_app():
     @app.route("/settings")
     def settings_page():
         config = load_config()
+        boards = get_relay_boards(config)
+        used = get_used_relays(config)
+        boards_view = []
+        for board in boards:
+            start = board["start_relay"]
+            end = start + board["channels"] - 1
+            used_in_board = sum(1 for r in used if start <= r <= end)
+            boards_view.append({
+                **board,
+                "end_relay": end,
+                "used_channels": used_in_board,
+                "free_channels": board["channels"] - used_in_board,
+            })
+
         return render_template(
             "settings.html",
             system=config.get("system", {}),
-            relay_board=config.get("relay_board", {}),
+            boards=boards_view,
+            total_relays=get_relay_count(config),
         )
+
+    @app.route("/settings/system", methods=["POST"])
+    def save_system_settings():
+        config = load_config()
+        system = config.setdefault("system", {})
+
+        def _float_or_default(name, default):
+            raw = request.form.get(name, "")
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                return default
+
+        system["decision_interval_seconds"] = _float_or_default(
+            "decision_interval_seconds", system.get("decision_interval_seconds", 5)
+        )
+        system["poll_interval_seconds"] = _float_or_default(
+            "poll_interval_seconds", system.get("poll_interval_seconds", 10)
+        )
+        system["sensor_request_timeout_seconds"] = _float_or_default(
+            "sensor_request_timeout_seconds", system.get("sensor_request_timeout_seconds", 2)
+        )
+        system["default_hysteresis_cm"] = _float_or_default(
+            "default_hysteresis_cm", system.get("default_hysteresis_cm", 0)
+        )
+        system["default_source_startup_delay_seconds"] = _float_or_default(
+            "default_source_startup_delay_seconds",
+            system.get("default_source_startup_delay_seconds", 0),
+        )
+        system["default_source_stop_delay_seconds"] = _float_or_default(
+            "default_source_stop_delay_seconds",
+            system.get("default_source_stop_delay_seconds", 0),
+        )
+        system["safe_mode_on_error"] = request.form.get("safe_mode_on_error") == "on"
+
+        save_config(config)
+        return redirect(url_for("settings_page"))
+
+    @app.route("/settings/boards/add", methods=["POST"])
+    def add_relay_board():
+        config = load_config()
+        boards = _normalized_boards_list(config)
+
+        board_id = request.form.get("id", "").strip()
+        if not board_id:
+            return "board id é obrigatório", 400
+
+        if any(b.get("id") == board_id for b in boards):
+            return "Já existe um módulo com esse id", 400
+
+        try:
+            channels = int(request.form.get("channels", 0) or 0)
+        except ValueError:
+            return "channels inválido", 400
+        if channels <= 0:
+            return "channels tem de ser > 0", 400
+
+        try:
+            port = int(request.form.get("port", 502) or 502)
+            unit_id = int(request.form.get("unit_id", 1) or 1)
+        except ValueError:
+            return "port/unit_id inválidos", 400
+
+        start_relay = _next_start_relay(boards)
+
+        boards.append({
+            "id": board_id,
+            "name": request.form.get("name", "").strip() or f"Módulo {board_id}",
+            "type": request.form.get("type", "").strip(),
+            "host": request.form.get("host", "").strip(),
+            "port": port,
+            "unit_id": unit_id,
+            "channels": channels,
+            "start_relay": start_relay,
+        })
+
+        config["relay_boards"] = boards
+        config.pop("relay_board", None)
+        save_config(config)
+        return redirect(url_for("settings_page"))
+
+    @app.route("/settings/boards/<board_id>", methods=["POST"])
+    def update_relay_board(board_id):
+        config = load_config()
+        boards = _normalized_boards_list(config)
+        board = next((b for b in boards if b.get("id") == board_id), None)
+        if board is None:
+            return "Módulo não encontrado", 404
+
+        action = request.form.get("action", "").strip()
+
+        if action == "delete":
+            start = board.get("start_relay", 1)
+            channels = board.get("channels", 0)
+            used = get_used_relays(config)
+            if any(start <= r < start + channels for r in used):
+                return "Não é possível remover: existem relés deste módulo em uso", 400
+            boards.remove(board)
+            _recompute_start_relays(boards)
+            config["relay_boards"] = boards
+            config.pop("relay_board", None)
+            save_config(config)
+            return redirect(url_for("settings_page"))
+
+        if action == "update":
+            try:
+                channels = int(request.form.get("channels", board["channels"]) or board["channels"])
+                port = int(request.form.get("port", board["port"]) or board["port"])
+                unit_id = int(request.form.get("unit_id", board["unit_id"]) or board["unit_id"])
+            except ValueError:
+                return "Valores numéricos inválidos", 400
+
+            if channels <= 0:
+                return "channels tem de ser > 0", 400
+
+            # Prevent shrinking below used channels
+            start = board.get("start_relay", 1)
+            used = get_used_relays(config)
+            max_used_in_board = max(
+                (r for r in used if start <= r < start + board["channels"]),
+                default=start - 1,
+            )
+            if max_used_in_board >= start + channels:
+                return f"Não é possível reduzir para {channels} canais: relé {max_used_in_board} está em uso", 400
+
+            board["name"] = request.form.get("name", board.get("name", "")).strip() or board.get("name", "")
+            board["type"] = request.form.get("type", board.get("type", "")).strip()
+            board["host"] = request.form.get("host", board.get("host", "")).strip()
+            board["port"] = port
+            board["unit_id"] = unit_id
+            board["channels"] = channels
+
+            _recompute_start_relays(boards)
+            config["relay_boards"] = boards
+            config.pop("relay_board", None)
+            save_config(config)
+            return redirect(url_for("settings_page"))
+
+        return "Ação desconhecida", 400
 
     return app
 

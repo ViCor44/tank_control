@@ -86,7 +86,11 @@ def update_tank_states():
 def main():
     while True:
         update_tank_states()
-        time.sleep(10)
+        config = load_config()
+        interval = float(
+            config.get("system", {}).get("poll_interval_seconds", 10) or 10
+        )
+        time.sleep(max(1.0, interval))
 
 
 if __name__ == "__main__":
