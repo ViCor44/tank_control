@@ -44,17 +44,22 @@ def enrich_tanks(tanks, tank_states):
 
 
 def enrich_sources(sources, source_states):
+    source_name_by_id = {s.get("id"): s.get("name", s.get("id")) for s in sources}
     enriched = []
 
     for source in sources:
         state = source_states.get(source["id"], {})
+        blocked_by_id = state.get("blocked_by")
         enriched.append({
             **source,
             "active": state.get("active", False),
             "status": state.get("status", "idle"),
             "current_tank_id": state.get("current_tank_id"),
             "current_tank_name": state.get("current_tank_name"),
+            "current_route_relay": state.get("current_route_relay", 0),
             "target_reason": state.get("target_reason"),
+            "blocked_by": blocked_by_id,
+            "blocked_by_name": source_name_by_id.get(blocked_by_id) if blocked_by_id else None,
             "last_update": state.get("last_update")
         })
 

@@ -29,6 +29,25 @@
       <span class="badge badge-status-{{ source.status }}" id="source-status-{{ source.id }}">{{ source.status }}</span>
     </div>
 
+    <div class="source-target" id="source-target-{{ source.id }}">
+      {% if source.current_tank_name %}
+        <span class="badge badge-filling">
+          <span class="pulse-dot"></span>
+          Alvo: {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
+        </span>
+      {% elif source.target_reason == 'blocked' and source.blocked_by_name %}
+        <span class="badge badge-status-low">Bloqueada — tanque servido por {{ source.blocked_by_name }}</span>
+      {% elif source.target_reason == 'no_route' %}
+        <span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>
+      {% elif source.target_reason == 'no_step' %}
+        <span class="badge badge-idle">Sem tanques a precisar de água</span>
+      {% elif source.target_reason == 'disabled' %}
+        <span class="badge badge-idle">Desativada</span>
+      {% else %}
+        <span class="badge badge-idle">Sem alvo</span>
+      {% endif %}
+    </div>
+
     <div class="tank-meta">
       <p><strong>ID:</strong> {{ source.id }}</p>
       <p><strong>Relé da fonte:</strong> {{ source.enable_relay if source.enable_relay is not none else '-' }}</p>
@@ -108,9 +127,28 @@ function updateSourcesPage(data) {
     const activeEl = document.getElementById(`source-active-${source.id}`);
     const statusEl = document.getElementById(`source-status-${source.id}`);
     const lastUpdateEl = document.getElementById(`source-last-update-${source.id}`);
+    const targetEl = document.getElementById(`source-target-${source.id}`);
 
     if (activeEl) activeEl.textContent = source.active ? "Sim" : "Não";
     if (statusEl) updateSourceStatus(statusEl, source.status);
+
+    if (targetEl) {
+      let html = "";
+      if (source.current_tank_name) {
+        html = `<span class="badge badge-filling"><span class="pulse-dot"></span> Alvo: ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
+      } else if (source.target_reason === "blocked" && source.blocked_by_name) {
+        html = `<span class="badge badge-status-low">Bloqueada — tanque servido por ${source.blocked_by_name}</span>`;
+      } else if (source.target_reason === "no_route") {
+        html = `<span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>`;
+      } else if (source.target_reason === "no_step") {
+        html = `<span class="badge badge-idle">Sem tanques a precisar de água</span>`;
+      } else if (source.target_reason === "disabled") {
+        html = `<span class="badge badge-idle">Desativada</span>`;
+      } else {
+        html = `<span class="badge badge-idle">Sem alvo</span>`;
+      }
+      targetEl.innerHTML = html;
+    }
 
     if (lastUpdateEl) {
       lastUpdateEl.dataset.iso = source.last_update || "";

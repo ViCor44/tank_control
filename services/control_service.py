@@ -60,7 +60,8 @@ def compute_source_targets(config, state):
     source_states = state.setdefault("sources", {})
 
     route_lookup = _build_route_lookup(config)
-    claimed_tanks = set()
+    # Track which source claimed each tank so we can explain a "blocked" reason.
+    claimed_by = {}
 
     for source in config.get("sources", []):
         source_id = source.get("id")
@@ -72,6 +73,7 @@ def compute_source_targets(config, state):
         source_state["current_route_relay"] = 0
         source_state["desired_active"] = False
         source_state["target_reason"] = "idle"
+        source_state["blocked_by"] = None
 
         if not source.get("enabled", False):
             source_state["target_reason"] = "disabled"
@@ -93,17 +95,19 @@ def compute_source_targets(config, state):
 
             tank_state = tank_states.get(tank_id, {})
             status = tank_state.get("status")
-            sensor_ok = tank_state.get("sensor_ok", False)
 
-            if not sensor_ok:
-                # can't decide; skip
+            # Only skip when the tank is in a state we can't act on.
+            # (sensor_ok is used only by the sensor-driven full/empty relays;
+            # the sequencer relies on the latest known status.)
+            if status in (None, "unknown", "disabled"):
                 continue
 
             if skip_full and status == "full":
                 continue
 
-            if not allow_multi_sources_per_tank and tank_id in claimed_tanks:
+            if not allow_multi_sources_per_tank and tank_id in claimed_by:
                 source_state["target_reason"] = "blocked"
+                source_state["blocked_by"] = claimed_by[tank_id]
                 continue
 
             route = route_lookup.get((source_id, tank_id))
@@ -112,6 +116,9 @@ def compute_source_targets(config, state):
                 continue
 
             valve_relay = int(route.get("valve_relay", 0) or 0)
+            if valve_relay <= 0:
+                source_state["target_reason"] = "no_route"
+                continue
 
             source_state["current_tank_id"] = tank_id
             source_state["current_tank_name"] = tank.get("name", tank_id)
@@ -119,7 +126,8 @@ def compute_source_targets(config, state):
             source_state["current_route_relay"] = valve_relay
             source_state["desired_active"] = True
             source_state["target_reason"] = "target"
-            claimed_tanks.add(tank_id)
+            source_state["blocked_by"] = None
+            claimed_by[tank_id] = source_id
             break
         else:
             if source_state["target_reason"] == "idle":
