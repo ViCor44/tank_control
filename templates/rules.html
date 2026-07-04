@@ -17,8 +17,10 @@
   <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
     Cada fonte enche os tanques pela ordem definida. Com <em>skip full tanks</em> ativo, quando o
     tanque atual estiver cheio a fonte avança para o próximo da lista. Podes também definir por
-    passo um <strong>limite mínimo</strong> — a rota só arranca se o tanque estiver abaixo dessa
-    percentagem (depois de arrancar, continua até ficar cheio).
+    passo dois limites: <strong>Arrancar se &lt; X%</strong> (só começa a servir quando o nível
+    estiver abaixo) e <strong>Parar em ≥ Y%</strong> (para de servir quando atingir Y%). Deixando
+    os dois iguais funcionam como um teto simples. Exemplo: rede pública com
+    <em>arrancar se &lt; 10%</em> e <em>parar em ≥ 30%</em> só ajuda em caso crítico.
   </p>
 
   <div class="sequence-list">
@@ -138,17 +140,24 @@
               </form>
             </div>
 
-            <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-step-threshold" title="Só arranca esta rota se o tanque estiver abaixo desta percentagem (0 = sem limite)">
+            <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-step-threshold" title="Arranca só quando o nível está abaixo do 1º valor; para de encher quando atinge o 2º.">
               <input type="hidden" name="action" value="set_step_threshold">
               <input type="hidden" name="index" value="{{ loop.index0 }}">
-              <label for="threshold-{{ source.id }}-{{ loop.index0 }}">Encher se &lt;</label>
-              <input id="threshold-{{ source.id }}-{{ loop.index0 }}"
+              <label for="start-{{ source.id }}-{{ loop.index0 }}">Arrancar se &lt;</label>
+              <input id="start-{{ source.id }}-{{ loop.index0 }}"
                      type="number" step="1" min="0" max="100"
-                     name="trigger_below_percent"
-                     value="{{ step.trigger_below_percent if step.trigger_below_percent is not none else '' }}"
+                     name="start_below_percent"
+                     value="{{ step.start_below_percent if step.start_below_percent is not none else '' }}"
                      placeholder="—">
               <span>%</span>
-              <button type="submit" class="icon-button" title="Guardar limite">💾</button>
+              <label for="stop-{{ source.id }}-{{ loop.index0 }}" style="margin-left: 8px;">Parar em ≥</label>
+              <input id="stop-{{ source.id }}-{{ loop.index0 }}"
+                     type="number" step="1" min="0" max="100"
+                     name="stop_at_percent"
+                     value="{{ step.stop_at_percent if step.stop_at_percent is not none else '' }}"
+                     placeholder="—">
+              <span>%</span>
+              <button type="submit" class="icon-button" title="Guardar limites">💾</button>
             </form>
           </div>
           {% endfor %}

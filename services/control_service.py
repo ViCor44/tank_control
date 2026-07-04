@@ -108,16 +108,37 @@ def compute_source_targets(config, state):
             if skip_full and status == "full":
                 continue
 
-            # Per-step start threshold with natural hysteresis:
-            # only apply when we are NOT already serving this tank.
-            trigger_below = step.get("trigger_below_percent")
-            try:
-                trigger_below = float(trigger_below) if trigger_below is not None else None
-            except (TypeError, ValueError):
-                trigger_below = None
-            if trigger_below is not None and trigger_below > 0 and previous_target != tank_id:
-                if level_percent is None or level_percent >= trigger_below:
-                    continue
+            # Per-step thresholds with hysteresis:
+            #   start_below_percent — only start serving this step when level < this
+            #   stop_at_percent     — while serving, stop when level >= this
+            # Backward-compat: if only trigger_below_percent is set, use it for both
+            # (hard cap behaviour).
+            def _to_float(v):
+                try:
+                    return float(v) if v is not None and v != "" else None
+                except (TypeError, ValueError):
+                    return None
+
+            legacy_cap = _to_float(step.get("trigger_below_percent"))
+            start_below = _to_float(step.get("start_below_percent"))
+            stop_at = _to_float(step.get("stop_at_percent"))
+            if start_below is None:
+                start_below = legacy_cap
+            if stop_at is None:
+                stop_at = legacy_cap
+
+            was_serving_this = (previous_target == tank_id)
+
+            if was_serving_this:
+                # Currently serving — stop only when we reach the stop threshold.
+                if stop_at is not None and stop_at > 0:
+                    if level_percent is not None and level_percent >= stop_at:
+                        continue
+            else:
+                # Not currently serving — require level below the start threshold.
+                if start_below is not None and start_below > 0:
+                    if level_percent is None or level_percent >= start_below:
+                        continue
 
             if not allow_multi_sources_per_tank and tank_id in claimed_by:
                 source_state["target_reason"] = "blocked"

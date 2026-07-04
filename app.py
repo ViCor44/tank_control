@@ -499,7 +499,16 @@ def create_app():
                     "has_route": has_route,
                     "is_current": (current_step_index == step_index) and source_active,
                     "is_target": (current_step_index == step_index) and not source_active,
-                    "trigger_below_percent": step.get("trigger_below_percent"),
+                    "start_below_percent": (
+                        step.get("start_below_percent")
+                        if step.get("start_below_percent") is not None
+                        else step.get("trigger_below_percent")
+                    ),
+                    "stop_at_percent": (
+                        step.get("stop_at_percent")
+                        if step.get("stop_at_percent") is not None
+                        else step.get("trigger_below_percent")
+                    ),
                 })
             enriched_sources.append({
                 "id": source_id,
@@ -591,17 +600,33 @@ def create_app():
             index = _parse_index(request.form.get("index"), len(sequence))
             if index is None:
                 return "Invalid index", 400
-            raw = (request.form.get("trigger_below_percent") or "").strip()
-            if raw == "":
-                sequence[index]["trigger_below_percent"] = None
-            else:
+
+            def _parse_percent(name):
+                raw = (request.form.get(name) or "").strip()
+                if raw == "":
+                    return None, None
                 try:
-                    value = float(raw)
+                    v = float(raw)
                 except ValueError:
-                    return "Valor de percentagem inválido", 400
-                if value < 0 or value > 100:
-                    return "Percentagem tem de estar entre 0 e 100", 400
-                sequence[index]["trigger_below_percent"] = value
+                    return None, f"Valor de {name} inválido"
+                if v < 0 or v > 100:
+                    return None, f"{name} tem de estar entre 0 e 100"
+                return v, None
+
+            start_val, err = _parse_percent("start_below_percent")
+            if err:
+                return err, 400
+            stop_val, err = _parse_percent("stop_at_percent")
+            if err:
+                return err, 400
+
+            if start_val is not None and stop_val is not None and stop_val < start_val:
+                return "O limite de paragem tem de ser igual ou superior ao de arranque", 400
+
+            sequence[index]["start_below_percent"] = start_val
+            sequence[index]["stop_at_percent"] = stop_val
+            # Drop the legacy single-field so the new pair is the source of truth.
+            sequence[index].pop("trigger_below_percent", None)
 
         elif action == "update_settings":
             source["repeat_sequence"] = request.form.get("repeat_sequence") == "on"
