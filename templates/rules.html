@@ -16,7 +16,9 @@
   <h3>Sequências por fonte</h3>
   <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
     Cada fonte enche os tanques pela ordem definida. Com <em>skip full tanks</em> ativo, quando o
-    tanque atual estiver cheio a fonte avança para o próximo da lista.
+    tanque atual estiver cheio a fonte avança para o próximo da lista. Podes também definir por
+    passo um <strong>limite mínimo</strong> — a rota só arranca se o tanque estiver abaixo dessa
+    percentagem (depois de arrancar, continua até ficar cheio).
   </p>
 
   <div class="sequence-list">
@@ -135,6 +137,19 @@
                 <button type="submit" class="icon-button icon-button-danger" title="Remover">✕</button>
               </form>
             </div>
+
+            <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-step-threshold" title="Só arranca esta rota se o tanque estiver abaixo desta percentagem (0 = sem limite)">
+              <input type="hidden" name="action" value="set_step_threshold">
+              <input type="hidden" name="index" value="{{ loop.index0 }}">
+              <label for="threshold-{{ source.id }}-{{ loop.index0 }}">Encher se &lt;</label>
+              <input id="threshold-{{ source.id }}-{{ loop.index0 }}"
+                     type="number" step="1" min="0" max="100"
+                     name="trigger_below_percent"
+                     value="{{ step.trigger_below_percent if step.trigger_below_percent is not none else '' }}"
+                     placeholder="—">
+              <span>%</span>
+              <button type="submit" class="icon-button" title="Guardar limite">💾</button>
+            </form>
           </div>
           {% endfor %}
 

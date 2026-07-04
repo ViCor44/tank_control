@@ -693,6 +693,29 @@ body {
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);
 }
 
+.sequence-step-threshold {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.sequence-step-threshold input[type="number"] {
+  width: 64px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 13px;
+  text-align: right;
+}
+
 .sequence-step-header {
   display: flex;
   gap: 10px;

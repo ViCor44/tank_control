@@ -66,6 +66,8 @@ def compute_source_targets(config, state):
     for source in config.get("sources", []):
         source_id = source.get("id")
         source_state = source_states.setdefault(source_id, {})
+        # Snapshot the target we were serving last cycle, before we reset it.
+        previous_target = source_state.get("current_tank_id")
 
         source_state["current_tank_id"] = None
         source_state["current_tank_name"] = None
@@ -95,6 +97,7 @@ def compute_source_targets(config, state):
 
             tank_state = tank_states.get(tank_id, {})
             status = tank_state.get("status")
+            level_percent = tank_state.get("level_percent")
 
             # Only skip when the tank is in a state we can't act on.
             # (sensor_ok is used only by the sensor-driven full/empty relays;
@@ -104,6 +107,17 @@ def compute_source_targets(config, state):
 
             if skip_full and status == "full":
                 continue
+
+            # Per-step start threshold with natural hysteresis:
+            # only apply when we are NOT already serving this tank.
+            trigger_below = step.get("trigger_below_percent")
+            try:
+                trigger_below = float(trigger_below) if trigger_below is not None else None
+            except (TypeError, ValueError):
+                trigger_below = None
+            if trigger_below is not None and trigger_below > 0 and previous_target != tank_id:
+                if level_percent is None or level_percent >= trigger_below:
+                    continue
 
             if not allow_multi_sources_per_tank and tank_id in claimed_by:
                 source_state["target_reason"] = "blocked"

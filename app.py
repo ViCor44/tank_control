@@ -499,6 +499,7 @@ def create_app():
                     "has_route": has_route,
                     "is_current": (current_step_index == step_index) and source_active,
                     "is_target": (current_step_index == step_index) and not source_active,
+                    "trigger_below_percent": step.get("trigger_below_percent"),
                 })
             enriched_sources.append({
                 "id": source_id,
@@ -585,6 +586,22 @@ def create_app():
             if index is None:
                 return "Invalid index", 400
             sequence[index]["enabled"] = not sequence[index].get("enabled", True)
+
+        elif action == "set_step_threshold":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None:
+                return "Invalid index", 400
+            raw = (request.form.get("trigger_below_percent") or "").strip()
+            if raw == "":
+                sequence[index]["trigger_below_percent"] = None
+            else:
+                try:
+                    value = float(raw)
+                except ValueError:
+                    return "Valor de percentagem inválido", 400
+                if value < 0 or value > 100:
+                    return "Percentagem tem de estar entre 0 e 100", 400
+                sequence[index]["trigger_below_percent"] = value
 
         elif action == "update_settings":
             source["repeat_sequence"] = request.form.get("repeat_sequence") == "on"
