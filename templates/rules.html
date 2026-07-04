@@ -143,6 +143,7 @@
             <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-step-threshold" title="Arranca só quando o nível está abaixo do 1º valor; para de encher quando atinge o 2º.">
               <input type="hidden" name="action" value="set_step_threshold">
               <input type="hidden" name="index" value="{{ loop.index0 }}">
+
               <label for="start-{{ source.id }}-{{ loop.index0 }}">Arrancar se &lt;</label>
               <input id="start-{{ source.id }}-{{ loop.index0 }}"
                      type="number" step="1" min="0" max="100"
@@ -150,14 +151,16 @@
                      value="{{ step.start_below_percent if step.start_below_percent is not none else '' }}"
                      placeholder="—">
               <span>%</span>
-              <label for="stop-{{ source.id }}-{{ loop.index0 }}" style="margin-left: 8px;">Parar em ≥</label>
+
+              <label for="stop-{{ source.id }}-{{ loop.index0 }}">Parar em ≥</label>
               <input id="stop-{{ source.id }}-{{ loop.index0 }}"
                      type="number" step="1" min="0" max="100"
                      name="stop_at_percent"
                      value="{{ step.stop_at_percent if step.stop_at_percent is not none else '' }}"
                      placeholder="—">
               <span>%</span>
-              <button type="submit" class="icon-button" title="Guardar limites">💾</button>
+
+              <button type="submit" class="icon-button threshold-save" title="Guardar limites">💾</button>
             </form>
           </div>
           {% endfor %}

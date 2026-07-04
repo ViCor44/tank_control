@@ -662,14 +662,23 @@ body {
 }
 
 .sequence-step {
-  min-width: 180px;
+  width: 240px;
+  flex: 0 0 240px;
+  box-sizing: border-box;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+.sequence-step .icon-button {
+  width: 34px;
+  height: 34px;
+  font-size: 14px;
+  border-radius: 8px;
 }
 
 .sequence-step-disabled {
@@ -694,26 +703,32 @@ body {
 }
 
 .sequence-step-threshold {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 60px auto;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 4px 6px;
+  margin-top: 4px;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
   color: var(--muted);
-  font-size: 13px;
-  flex-wrap: wrap;
+  font-size: 12px;
 }
 
 .sequence-step-threshold input[type="number"] {
-  width: 64px;
+  width: 100%;
   background: var(--panel);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 4px 6px;
-  font-size: 13px;
+  padding: 3px 6px;
+  font-size: 12px;
   text-align: right;
+}
+
+.sequence-step-threshold .threshold-save {
+  grid-column: 1 / -1;
+  justify-self: end;
+  margin-top: 2px;
 }
 
 .sequence-step-header {
@@ -757,8 +772,9 @@ body {
 
 .sequence-step-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .sequence-step-actions form {
