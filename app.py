@@ -57,6 +57,7 @@ def enrich_sources(sources, source_states):
             "status": state.get("status", "idle"),
             "current_tank_id": state.get("current_tank_id"),
             "current_tank_name": state.get("current_tank_name"),
+            "current_step_index": state.get("current_step_index"),
             "current_route_relay": state.get("current_route_relay", 0),
             "target_reason": state.get("target_reason"),
             "blocked_by": blocked_by_id,

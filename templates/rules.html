@@ -29,20 +29,22 @@
             <span class="badge {{ 'badge-green' if source.enabled else 'badge-red' }}">
               {{ 'ativa' if source.enabled else 'inativa' }}
             </span>
-            {% if source.active and source.current_tank_name %}
-              <span class="badge badge-filling">
-                <span class="pulse-dot"></span>
-                A encher {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
-              </span>
-            {% elif source.runtime_status == 'waiting' %}
-              <span class="badge badge-status-waiting">A aguardar arranque…</span>
-            {% elif source.target_reason == 'blocked' and source.blocked_by_name %}
-              <span class="badge badge-status-blocked">Bloqueada por {{ source.blocked_by_name }}</span>
-            {% elif source.target_reason == 'no_route' %}
-              <span class="badge badge-status-no_route">Sem rota</span>
-            {% elif source.target_reason == 'no_step' %}
-              <span class="badge badge-idle">Sem tanques a precisar</span>
-            {% endif %}
+            <span class="rules-source-runtime" id="rules-source-runtime-{{ source.id }}">
+              {% if source.active and source.current_tank_name %}
+                <span class="badge badge-filling">
+                  <span class="pulse-dot"></span>
+                  A encher {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
+                </span>
+              {% elif source.runtime_status == 'waiting' %}
+                <span class="badge badge-status-waiting">A aguardar arranque…</span>
+              {% elif source.target_reason == 'blocked' and source.blocked_by_name %}
+                <span class="badge badge-status-blocked">Bloqueada por {{ source.blocked_by_name }}</span>
+              {% elif source.target_reason == 'no_route' %}
+                <span class="badge badge-status-no_route">Sem rota</span>
+              {% elif source.target_reason == 'no_step' %}
+                <span class="badge badge-idle">Sem tanques a precisar</span>
+              {% endif %}
+            </span>
           </h4>
           <div style="color: var(--muted); font-size: 13px; margin-top: 4px;">
             ID: <strong>{{ source.id }}</strong> ·
@@ -78,19 +80,24 @@
         {% if source.steps %}
           {% for step in source.steps %}
           <div class="sequence-arrow">→</div>
-          <div class="sequence-step {% if step.is_current %}sequence-step-active{% endif %} {% if step.is_target and not step.is_current %}sequence-step-target{% endif %} {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}">
+          <div class="sequence-step {% if step.is_current %}sequence-step-active{% endif %} {% if step.is_target and not step.is_current %}sequence-step-target{% endif %} {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}"
+               id="rules-step-{{ source.id }}-{{ loop.index0 }}"
+               data-source-id="{{ source.id }}"
+               data-step-index="{{ loop.index0 }}">
             <div class="sequence-step-header">
               <span class="sequence-step-index">{{ loop.index }}</span>
               <div>
                 <div class="sequence-step-name">
                   {{ step.tank_name }}
-                  {% if step.is_current %}
-                    <span class="badge badge-filling" style="margin-left: 6px;">
-                      <span class="pulse-dot"></span> a encher
-                    </span>
-                  {% elif step.is_target %}
-                    <span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>
-                  {% endif %}
+                  <span class="rules-step-badge" id="rules-step-badge-{{ source.id }}-{{ loop.index0 }}">
+                    {% if step.is_current %}
+                      <span class="badge badge-filling" style="margin-left: 6px;">
+                        <span class="pulse-dot"></span> a encher
+                      </span>
+                    {% elif step.is_target %}
+                      <span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>
+                    {% endif %}
+                  </span>
                 </div>
                 <div class="sequence-step-meta">
                   {{ step.tank_id }}
@@ -186,4 +193,74 @@
     </div>
   </form>
 </div>
+
+<script>
+function buildSourceRuntimeBadge(source) {
+  if (source.active && source.current_tank_name) {
+    return `<span class="badge badge-filling"><span class="pulse-dot"></span> A encher ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
+  }
+  if (source.status === "waiting") {
+    return `<span class="badge badge-status-waiting">A aguardar arranque…</span>`;
+  }
+  if (source.target_reason === "blocked" && source.blocked_by_name) {
+    return `<span class="badge badge-status-blocked">Bloqueada por ${source.blocked_by_name}</span>`;
+  }
+  if (source.target_reason === "no_route") {
+    return `<span class="badge badge-status-no_route">Sem rota</span>`;
+  }
+  if (source.target_reason === "no_step") {
+    return `<span class="badge badge-idle">Sem tanques a precisar</span>`;
+  }
+  return "";
+}
+
+function buildStepBadge(isCurrent, isTarget) {
+  if (isCurrent) {
+    return `<span class="badge badge-filling" style="margin-left: 6px;"><span class="pulse-dot"></span> a encher</span>`;
+  }
+  if (isTarget) {
+    return `<span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>`;
+  }
+  return "";
+}
+
+function updateRulesRuntime(data) {
+  (data.sources || []).forEach(source => {
+    const runtimeEl = document.getElementById(`rules-source-runtime-${source.id}`);
+    if (runtimeEl) {
+      runtimeEl.innerHTML = buildSourceRuntimeBadge(source);
+    }
+
+    // Update per-step highlights
+    const stepEls = document.querySelectorAll(`[id^="rules-step-${source.id}-"]`);
+    stepEls.forEach(el => {
+      if (!el.dataset.stepIndex) return;
+      const idx = parseInt(el.dataset.stepIndex, 10);
+      const isCurrent = source.active && source.current_step_index === idx;
+      const isTarget = !source.active && source.current_step_index === idx;
+
+      el.classList.toggle("sequence-step-active", isCurrent);
+      el.classList.toggle("sequence-step-target", isTarget && !isCurrent);
+
+      const badgeEl = document.getElementById(`rules-step-badge-${source.id}-${idx}`);
+      if (badgeEl) {
+        badgeEl.innerHTML = buildStepBadge(isCurrent, isTarget);
+      }
+    });
+  });
+}
+
+async function fetchRulesState() {
+  try {
+    const response = await fetch("/api/state");
+    if (!response.ok) return;
+    const data = await response.json();
+    updateRulesRuntime(data);
+  } catch (err) {
+    console.error("Erro ao atualizar regras:", err);
+  }
+}
+
+setInterval(fetchRulesState, 5000);
+</script>
 {% endblock %}
