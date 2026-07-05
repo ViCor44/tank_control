@@ -55,6 +55,7 @@ def compute_source_targets(config, state):
     skip_full = bool(rules.get("skip_full_tanks", True))
     skip_disabled_tanks = bool(rules.get("skip_disabled_tanks", True))
     allow_multi_sources_per_tank = bool(rules.get("allow_multiple_sources_per_tank", False))
+    prioritize_empty = bool(rules.get("prioritize_empty_tanks", False))
 
     tank_states = state.get("tanks", {})
     source_states = state.setdefault("sources", {})
@@ -62,6 +63,12 @@ def compute_source_targets(config, state):
     route_lookup = _build_route_lookup(config)
     # Track which source claimed each tank so we can explain a "blocked" reason.
     claimed_by = {}
+
+    def _to_float(v):
+        try:
+            return float(v) if v is not None and v != "" else None
+        except (TypeError, ValueError):
+            return None
 
     for source in config.get("sources", []):
         source_id = source.get("id")
@@ -82,6 +89,9 @@ def compute_source_targets(config, state):
             continue
 
         sequence = source.get("sequence", []) or []
+
+        candidates = []
+        last_reject_reason = None  # (reason, blocked_by) for UI feedback when nothing eligible
 
         for idx, step in enumerate(sequence):
             if not step.get("enabled", True):
@@ -113,12 +123,6 @@ def compute_source_targets(config, state):
             #   stop_at_percent     — while serving, stop when level >= this
             # Backward-compat: if only trigger_below_percent is set, use it for both
             # (hard cap behaviour).
-            def _to_float(v):
-                try:
-                    return float(v) if v is not None and v != "" else None
-                except (TypeError, ValueError):
-                    return None
-
             legacy_cap = _to_float(step.get("trigger_below_percent"))
             start_below = _to_float(step.get("start_below_percent"))
             stop_at = _to_float(step.get("stop_at_percent"))
@@ -141,32 +145,55 @@ def compute_source_targets(config, state):
                         continue
 
             if not allow_multi_sources_per_tank and tank_id in claimed_by:
-                source_state["target_reason"] = "blocked"
-                source_state["blocked_by"] = claimed_by[tank_id]
+                last_reject_reason = ("blocked", claimed_by[tank_id])
                 continue
 
             route = route_lookup.get((source_id, tank_id))
             if route is None or not route.get("enabled", True):
-                source_state["target_reason"] = "no_route"
+                last_reject_reason = ("no_route", None)
                 continue
 
             valve_relay = int(route.get("valve_relay", 0) or 0)
             if valve_relay <= 0:
-                source_state["target_reason"] = "no_route"
+                last_reject_reason = ("no_route", None)
                 continue
 
-            source_state["current_tank_id"] = tank_id
-            source_state["current_tank_name"] = tank.get("name", tank_id)
-            source_state["current_step_index"] = idx
-            source_state["current_route_relay"] = valve_relay
-            source_state["desired_active"] = True
-            source_state["target_reason"] = "target"
-            source_state["blocked_by"] = None
-            claimed_by[tank_id] = source_id
-            break
-        else:
-            if source_state["target_reason"] == "idle":
+            # Treat missing level as "full" for ranking, so unknown never beats a real reading.
+            sort_level = level_percent if level_percent is not None else 100.0
+
+            candidates.append({
+                "idx": idx,
+                "tank": tank,
+                "tank_id": tank_id,
+                "valve_relay": valve_relay,
+                "level_percent": sort_level,
+                "was_serving": was_serving_this,
+            })
+
+        if not candidates:
+            if last_reject_reason is not None:
+                source_state["target_reason"] = last_reject_reason[0]
+                source_state["blocked_by"] = last_reject_reason[1]
+            else:
                 source_state["target_reason"] = "no_step"
+            continue
+
+        if prioritize_empty:
+            # Emptiest wins; sequence index as deterministic tie-breaker.
+            candidates.sort(key=lambda c: (c["level_percent"], c["idx"]))
+        else:
+            candidates.sort(key=lambda c: c["idx"])
+
+        chosen = candidates[0]
+        tank = chosen["tank"]
+        source_state["current_tank_id"] = chosen["tank_id"]
+        source_state["current_tank_name"] = tank.get("name", chosen["tank_id"])
+        source_state["current_step_index"] = chosen["idx"]
+        source_state["current_route_relay"] = chosen["valve_relay"]
+        source_state["desired_active"] = True
+        source_state["target_reason"] = "target"
+        source_state["blocked_by"] = None
+        claimed_by[chosen["tank_id"]] = source_id
 
     return state
 
