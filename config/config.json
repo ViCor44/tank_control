@@ -6,7 +6,9 @@
     "poll_interval_seconds": 10,
     "default_hysteresis_cm": 10,
     "default_source_startup_delay_seconds": 0,
-    "default_source_stop_delay_seconds": 0
+    "default_source_stop_delay_seconds": 0,
+    "sensor_spike_threshold_cm": 7,
+    "sensor_spike_max_consecutive": 3
   },
   "relay_boards": [
     {

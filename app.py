@@ -826,6 +826,18 @@ def create_app():
             "default_source_stop_delay_seconds",
             system.get("default_source_stop_delay_seconds", 0),
         )
+        system["sensor_spike_threshold_cm"] = _float_or_default(
+            "sensor_spike_threshold_cm",
+            system.get("sensor_spike_threshold_cm", 7),
+        )
+        try:
+            system["sensor_spike_max_consecutive"] = int(
+                request.form.get("sensor_spike_max_consecutive", "")
+            )
+        except (TypeError, ValueError):
+            system["sensor_spike_max_consecutive"] = int(
+                system.get("sensor_spike_max_consecutive", 3) or 3
+            )
         system["safe_mode_on_error"] = request.form.get("safe_mode_on_error") == "on"
 
         save_config(config)
