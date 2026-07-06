@@ -1,10 +1,19 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from services.relay_service import build_relay_board_service
 
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _parse_iso(value):
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _decide_full_relay(distance_cm, distance_full_cm, hysteresis_cm, previous_on):
@@ -267,6 +276,8 @@ def apply_source_relays(config, state):
     system = config.get("system", {})
     default_start_delay = float(system.get("default_source_startup_delay_seconds", 0) or 0)
     default_stop_delay = float(system.get("default_source_stop_delay_seconds", 0) or 0)
+    default_valve_overlap = float(system.get("default_valve_overlap_seconds", 0) or 0)
+    default_valve_close_delay = float(system.get("default_valve_close_delay_seconds", 0) or 0)
 
     # Clear filling markers on every cycle before we set new ones.
     for ts in tank_states.values():
@@ -292,6 +303,8 @@ def apply_source_relays(config, state):
             source_state["status"] = "disabled"
             source_state["last_update"] = now_iso()
             source_state["desired_active_since"] = None
+            source_state["physical_route_relay"] = 0
+            source_state["pending_valve_close"] = {}
             if enable_relay > 0:
                 relay_results.append(relay_service.relay_off(enable_relay))
             for route in source_routes:
@@ -304,15 +317,14 @@ def apply_source_relays(config, state):
         current_active = bool(source_state.get("active", False))
         startup_delay = float(source.get("startup_delay_seconds", default_start_delay) or 0)
         stop_delay = float(source.get("stop_delay_seconds", default_stop_delay) or 0)
+        valve_overlap = float(source.get("valve_overlap_seconds", default_valve_overlap) or 0)
+        valve_close_delay = float(source.get("valve_close_delay_seconds", default_valve_close_delay) or 0)
 
         applied_active = current_active
         if desired_active != current_active:
             since_iso = source_state.get("desired_active_since")
             if since_iso:
-                try:
-                    since = datetime.fromisoformat(since_iso)
-                except ValueError:
-                    since = now
+                since = _parse_iso(since_iso) or now
             else:
                 since = now
                 source_state["desired_active_since"] = now.isoformat()
@@ -328,17 +340,82 @@ def apply_source_relays(config, state):
 
         current_route_relay = int(source_state.get("current_route_relay", 0) or 0)
 
-        # Route valves: only the currently-selected route is on (and only while pumping).
+        # --- Safety-aware valve state machine ---
+        #
+        # Two goals:
+        #   1. On tank switch (same source): keep the OLD valve open for
+        #      `valve_overlap` seconds after the NEW valve opens, so the pump
+        #      never sees two closed valves at once.
+        #   2. On source stop: close the equipment/enable relay first, and keep
+        #      the last valve open for `valve_close_delay` seconds afterwards,
+        #      so the pump can spin down without pressurizing a closed line.
+        #
+        # We track per source:
+        #   - physical_route_relay: last valve we asked to be open (int)
+        #   - pending_valve_close: {relay_str: iso_close_at} valves that must
+        #     stay open until their scheduled close time.
+        prev_physical = int(source_state.get("physical_route_relay", 0) or 0)
+        pending_raw = source_state.get("pending_valve_close") or {}
+        pending_valve_close = {}
+        for relay_str, close_iso in pending_raw.items():
+            try:
+                relay_num = int(relay_str)
+            except (TypeError, ValueError):
+                continue
+            if relay_num <= 0:
+                continue
+            pending_valve_close[str(relay_num)] = close_iso
+
+        if applied_active and current_route_relay > 0:
+            # If we just switched target, schedule the old valve for a delayed close.
+            if prev_physical and prev_physical != current_route_relay and valve_overlap > 0:
+                overlap_at = (now + timedelta(seconds=valve_overlap)).isoformat()
+                pending_valve_close[str(prev_physical)] = overlap_at
+            # The valve we want open right now must never be in pending_close.
+            pending_valve_close.pop(str(current_route_relay), None)
+            source_state["physical_route_relay"] = current_route_relay
+        else:
+            # Source is (or is becoming) inactive. Keep the last valve open for
+            # `valve_close_delay` seconds so the pump can wind down safely.
+            if prev_physical and str(prev_physical) not in pending_valve_close:
+                if valve_close_delay > 0:
+                    close_at = (now + timedelta(seconds=valve_close_delay)).isoformat()
+                    pending_valve_close[str(prev_physical)] = close_at
+                # If there's no delay configured we just close it immediately,
+                # which is achieved by NOT adding it to pending_valve_close.
+
+        # Compute which valves must be physically open this cycle.
+        open_valves = set()
+        if applied_active and current_route_relay > 0:
+            open_valves.add(current_route_relay)
+
+        for relay_str in list(pending_valve_close.keys()):
+            close_at = _parse_iso(pending_valve_close[relay_str])
+            if close_at is None or now >= close_at:
+                pending_valve_close.pop(relay_str, None)
+                continue
+            open_valves.add(int(relay_str))
+
+        # Once the last pending close has expired and we're inactive, we can
+        # forget the physical valve tracker.
+        if not applied_active and not pending_valve_close:
+            source_state["physical_route_relay"] = 0
+
+        source_state["pending_valve_close"] = pending_valve_close
+
+        # Emit valve commands for every route belonging to this source.
         for route in source_routes:
             vr = int(route.get("valve_relay", 0) or 0)
             if vr <= 0:
                 continue
-            if applied_active and vr == current_route_relay:
+            if vr in open_valves:
                 relay_results.append(relay_service.relay_on(vr))
             else:
                 relay_results.append(relay_service.relay_off(vr))
 
-        # Source enable relay
+        # Source enable relay: OFF the moment we go inactive, ON while active.
+        # The valve-close-delay above guarantees the pump stops before the
+        # remaining valve closes.
         if enable_relay > 0:
             if applied_active:
                 relay_results.append(relay_service.relay_on(enable_relay))

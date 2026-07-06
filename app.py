@@ -134,7 +134,9 @@ def build_empty_source():
         "enabled": True,
         "enable_relay": 0,
         "startup_delay_seconds": 0,
-        "stop_delay_seconds": 0
+        "stop_delay_seconds": 0,
+        "valve_overlap_seconds": 0,
+        "valve_close_delay_seconds": 0
     }
 
 
@@ -179,6 +181,8 @@ def populate_source_from_form(source, form):
     source["enable_relay"] = int(form.get("enable_relay", 0) or 0)
     source["startup_delay_seconds"] = float(form.get("startup_delay_seconds", 0) or 0)
     source["stop_delay_seconds"] = float(form.get("stop_delay_seconds", 0) or 0)
+    source["valve_overlap_seconds"] = float(form.get("valve_overlap_seconds", 0) or 0)
+    source["valve_close_delay_seconds"] = float(form.get("valve_close_delay_seconds", 0) or 0)
     return source
 
 
@@ -825,6 +829,14 @@ def create_app():
         system["default_source_stop_delay_seconds"] = _float_or_default(
             "default_source_stop_delay_seconds",
             system.get("default_source_stop_delay_seconds", 0),
+        )
+        system["default_valve_overlap_seconds"] = _float_or_default(
+            "default_valve_overlap_seconds",
+            system.get("default_valve_overlap_seconds", 0),
+        )
+        system["default_valve_close_delay_seconds"] = _float_or_default(
+            "default_valve_close_delay_seconds",
+            system.get("default_valve_close_delay_seconds", 0),
         )
         system["sensor_spike_threshold_cm"] = _float_or_default(
             "sensor_spike_threshold_cm",
