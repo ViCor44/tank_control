@@ -103,7 +103,7 @@
         <option value="0" {% if not tank.relays.empty %}selected{% endif %}>— sem relé —</option>
         {% for option in relay_options_empty %}
         <option value="{{ option.number }}" {% if tank.relays.empty == option.number %}selected{% endif %}>
-          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+          Relé {{ option.number }}
         </option>
         {% endfor %}
       </select>
@@ -115,7 +115,7 @@
         <option value="0" {% if not tank.relays.full %}selected{% endif %}>— sem relé —</option>
         {% for option in relay_options_full %}
         <option value="{{ option.number }}" {% if tank.relays.full == option.number %}selected{% endif %}>
-          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+          Relé {{ option.number }}
         </option>
         {% endfor %}
       </select>

@@ -43,7 +43,7 @@
         <option value="0" {% if not source.enable_relay %}selected{% endif %}>— sem relé —</option>
         {% for option in relay_options %}
         <option value="{{ option.number }}" {% if source.enable_relay == option.number %}selected{% endif %}>
-          Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+          Relé {{ option.number }}
         </option>
         {% endfor %}
       </select>

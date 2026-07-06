@@ -62,7 +62,7 @@
               <option value="0" {% if not route.valve_relay %}selected{% endif %}>— sem relé —</option>
               {% for option in route.relay_options %}
               <option value="{{ option.number }}" {% if route.valve_relay == option.number %}selected{% endif %}>
-                Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+                Relé {{ option.number }}
               </option>
               {% endfor %}
             </select>
@@ -109,7 +109,7 @@
           <option value="0" selected>— sem relé —</option>
           {% for option in card.add_relay_options %}
           <option value="{{ option.number }}">
-            Relé {{ option.number }}{% if option.name %} · {{ option.name }}{% endif %}
+            Relé {{ option.number }}
           </option>
           {% endfor %}
         </select>
