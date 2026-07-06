@@ -111,6 +111,57 @@
 </div>
 
 <div class="panel">
+  <h3>Atribuição de relés</h3>
+  <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
+    Lista completa dos relés configurados e a que estão atribuídos. Relés sem
+    atribuição ficam disponíveis para tanques, fontes ou rotas.
+  </p>
+
+  {% set assigned_count = relay_assignments | selectattr('assignments') | list | length %}
+  <div style="margin-bottom: 12px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <span class="badge badge-blue">{{ relay_assignments | length }} relés no total</span>
+    <span class="badge badge-blue">{{ assigned_count }} atribuídos</span>
+    <span class="badge badge-idle">{{ relay_assignments | length - assigned_count }} livres</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="assign-table">
+      <thead>
+        <tr>
+          <th style="width: 90px;">Relé</th>
+          <th style="width: 160px;">Módulo</th>
+          <th>Atribuição</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in relay_assignments %}
+        <tr>
+          <td><strong>Relé {{ row.number }}</strong></td>
+          <td>{{ row.board_name }} <span style="color: var(--muted); font-size: 12px;">({{ row.board_id }})</span></td>
+          <td>
+            {% if row.assignments %}
+              {% for a in row.assignments %}
+                {% if a.kind == 'source_enable' %}
+                  {% set badge_class = 'badge badge-status-active' %}
+                {% elif a.kind == 'route' %}
+                  {% set badge_class = 'badge badge-blue' %}
+                {% else %}
+                  {% set badge_class = 'badge badge-status-low' %}
+                {% endif %}
+                <div><span class="{{ badge_class }}">{{ a.label }}</span></div>
+              {% endfor %}
+            {% else %}
+              <span class="badge badge-idle">— livre —</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
   <h3>Módulos de relés</h3>
   <p style="margin: 0 0 16px; color: var(--muted); font-size: 14px;">
     Cada módulo Modbus TCP fornece um bloco contíguo de relés. Podes adicionar módulos extra —

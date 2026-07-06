@@ -121,3 +121,95 @@ def get_available_relay_options(config, include=None, exclude=None):
 
     return options
 
+
+def get_relay_assignments(config):
+    """Return one row per configured relay describing what (if anything)
+    it is currently assigned to.
+
+    Row shape:
+        {
+            "number": int,
+            "board_id": str,
+            "board_name": str,
+            "assignments": [
+                {"kind": "tank_empty" | "tank_full"
+                          | "source_enable" | "route",
+                 "label": str,
+                 "source_id": str | None,
+                 "tank_id": str | None}
+            ]  # may be empty when the relay is free
+        }
+    """
+    # Build a lookup from relay number -> list of assignments.
+    assignments_by_relay = {}
+
+    def _push(relay_number, entry):
+        if not relay_number or relay_number <= 0:
+            return
+        assignments_by_relay.setdefault(int(relay_number), []).append(entry)
+
+    for tank in config.get("tanks", []):
+        tank_id = tank.get("id")
+        tank_name = tank.get("name", tank_id)
+        relays = tank.get("relays", {}) or {}
+        empty_relay = relays.get("empty", 0) or 0
+        full_relay = relays.get("full", 0) or 0
+        if empty_relay:
+            _push(empty_relay, {
+                "kind": "tank_empty",
+                "label": f"Tanque {tank_name} — sensor de vazio",
+                "source_id": None,
+                "tank_id": tank_id,
+            })
+        if full_relay:
+            _push(full_relay, {
+                "kind": "tank_full",
+                "label": f"Tanque {tank_name} — sensor de cheio",
+                "source_id": None,
+                "tank_id": tank_id,
+            })
+
+    tank_names = {t.get("id"): t.get("name", t.get("id")) for t in config.get("tanks", [])}
+    source_names = {s.get("id"): s.get("name", s.get("id")) for s in config.get("sources", [])}
+
+    for source in config.get("sources", []):
+        source_id = source.get("id")
+        source_name = source_names.get(source_id, source_id)
+        enable_relay = source.get("enable_relay", source.get("valve_relay", 0)) or 0
+        if enable_relay:
+            _push(enable_relay, {
+                "kind": "source_enable",
+                "label": f"Fonte {source_name} — relé do equipamento",
+                "source_id": source_id,
+                "tank_id": None,
+            })
+
+    for route in config.get("routes", []):
+        source_id = route.get("source_id")
+        tank_id = route.get("tank_id")
+        valve_relay = route.get("valve_relay", 0) or 0
+        if valve_relay:
+            source_name = source_names.get(source_id, source_id)
+            tank_name = tank_names.get(tank_id, tank_id)
+            _push(valve_relay, {
+                "kind": "route",
+                "label": f"Rota {source_name} → {tank_name}",
+                "source_id": source_id,
+                "tank_id": tank_id,
+            })
+
+    # Emit one row per configured relay slot on every board.
+    rows = []
+    for board in get_relay_boards(config):
+        start = board.get("start_relay", 1)
+        channels = board.get("channels", 0)
+        for number in range(start, start + channels):
+            rows.append({
+                "number": number,
+                "board_id": board.get("id"),
+                "board_name": board.get("name"),
+                "assignments": assignments_by_relay.get(number, []),
+            })
+
+    return rows
+

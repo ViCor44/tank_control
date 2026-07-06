@@ -7,6 +7,7 @@ from services.relay_inventory import (
     get_used_relays,
     get_relay_boards,
     get_relay_count,
+    get_relay_assignments,
 )
 
 
@@ -796,6 +797,7 @@ def create_app():
             system=config.get("system", {}),
             boards=boards_view,
             total_relays=get_relay_count(config),
+            relay_assignments=get_relay_assignments(config),
         )
 
     @app.route("/settings/system", methods=["POST"])
