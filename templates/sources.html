@@ -37,6 +37,8 @@
         </span>
       {% elif source.target_reason == 'blocked' and source.blocked_by_name %}
         <span class="badge badge-status-low">Bloqueada — tanque servido por {{ source.blocked_by_name }}</span>
+      {% elif source.target_reason == 'sensor_offline' %}
+        <span class="badge badge-status-critical_low">Fail-safe — sensor do tanque alvo offline</span>
       {% elif source.target_reason == 'no_route' %}
         <span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>
       {% elif source.target_reason == 'no_step' %}
@@ -138,6 +140,8 @@ function updateSourcesPage(data) {
         html = `<span class="badge badge-filling"><span class="pulse-dot"></span> Alvo: ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
       } else if (source.target_reason === "blocked" && source.blocked_by_name) {
         html = `<span class="badge badge-status-low">Bloqueada — tanque servido por ${source.blocked_by_name}</span>`;
+      } else if (source.target_reason === "sensor_offline") {
+        html = `<span class="badge badge-status-critical_low">Fail-safe — sensor do tanque alvo offline</span>`;
       } else if (source.target_reason === "no_route") {
         html = `<span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>`;
       } else if (source.target_reason === "no_step") {

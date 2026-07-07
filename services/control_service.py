@@ -118,9 +118,17 @@ def compute_source_targets(config, state):
             status = tank_state.get("status")
             level_percent = tank_state.get("level_percent")
 
+            # Fail-safe: if the tank sensor is offline we cannot know the real
+            # level, so we must never keep (or start) filling it. Any source
+            # currently serving this tank will get desired_active=False and be
+            # wound down safely by the stop_delay + valve_close_delay machinery
+            # below. The tank's own full/empty relays are already forced OFF
+            # by apply_tank_level_relays in the same situation.
+            if not tank_state.get("sensor_ok", False):
+                last_reject_reason = ("sensor_offline", None)
+                continue
+
             # Only skip when the tank is in a state we can't act on.
-            # (sensor_ok is used only by the sensor-driven full/empty relays;
-            # the sequencer relies on the latest known status.)
             if status in (None, "unknown", "disabled"):
                 continue
 
@@ -434,6 +442,8 @@ def apply_source_relays(config, state):
             source_state["status"] = "blocked"
         elif reason == "no_route":
             source_state["status"] = "no_route"
+        elif reason == "sensor_offline":
+            source_state["status"] = "sensor_offline"
         elif reason in ("no_step", "idle"):
             source_state["status"] = "idle"
         else:
