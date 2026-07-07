@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
-from services.config_service import load_config, load_state, save_config
+from datetime import datetime, timezone
+
+from services.config_service import load_config, load_state, save_config, save_state
 from services.alarm_service import build_tank_alarms
 from services.relay_inventory import (
     get_available_relay_options,
@@ -378,6 +380,49 @@ def create_app():
             relay_options_empty=get_available_relay_options(config, include=[current_empty], exclude=[tank]),
             relay_options_full=get_available_relay_options(config, include=[current_full], exclude=[tank]),
         )
+
+    @app.route("/tanks/<tank_id>/reset_sensor", methods=["POST"])
+    def reset_tank_sensor(tank_id):
+        """Clear the spike-filter state of a tank so the next poll accepts
+        whatever the sensor returns. Useful after moving/replacing a sensor or
+        after big legitimate level jumps that the filter locked out.
+
+        Note: there is a small race window with the sensor_poller — if the
+        poller is mid-cycle it may overwrite our reset with the old values.
+        A retry solves it. We keep this simple on purpose.
+        """
+        config = load_config()
+        tank = get_tank_by_id(config.get("tanks", []), tank_id)
+        if tank is None:
+            return "Tank not found", 404
+
+        state = load_state()
+        tanks_state = state.setdefault("tanks", {})
+        tank_state = tanks_state.setdefault(tank_id, {})
+
+        # Drop everything the spike filter and status use as "previous value".
+        for key in (
+            "distance_cm",
+            "level_percent",
+            "volume_liters",
+            "last_raw_distance_cm",
+            "last_spike_delta_cm",
+            "consecutive_spike_count",
+            "last_error",
+        ):
+            tank_state.pop(key, None)
+
+        # Mark the sensor as offline until the next successful poll — this way
+        # the fail-safe already in place skips it and no source keeps filling
+        # it based on stale data.
+        tank_state["sensor_ok"] = False
+        tank_state["status"] = "unknown"
+        tank_state["last_update"] = datetime.now(timezone.utc).isoformat()
+
+        save_state(state)
+
+        # Return to wherever the user was (tanks page / dashboard).
+        return redirect(request.referrer or url_for("tanks_page"))
 
     @app.route("/sources")
     def sources_page():
