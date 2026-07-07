@@ -92,6 +92,7 @@ def compute_source_targets(config, state):
         source_state["desired_active"] = False
         source_state["target_reason"] = "idle"
         source_state["blocked_by"] = None
+        source_state["skipped_offline_tank_ids"] = []
 
         if not source.get("enabled", False):
             source_state["target_reason"] = "disabled"
@@ -101,6 +102,7 @@ def compute_source_targets(config, state):
 
         candidates = []
         last_reject_reason = None  # (reason, blocked_by) for UI feedback when nothing eligible
+        skipped_offline = []  # tank_ids in this source's sequence whose sensor is offline
 
         for idx, step in enumerate(sequence):
             if not step.get("enabled", True):
@@ -125,6 +127,7 @@ def compute_source_targets(config, state):
             # below. The tank's own full/empty relays are already forced OFF
             # by apply_tank_level_relays in the same situation.
             if not tank_state.get("sensor_ok", False):
+                skipped_offline.append(tank_id)
                 last_reject_reason = ("sensor_offline", None)
                 continue
 
@@ -193,6 +196,7 @@ def compute_source_targets(config, state):
                 source_state["blocked_by"] = last_reject_reason[1]
             else:
                 source_state["target_reason"] = "no_step"
+            source_state["skipped_offline_tank_ids"] = skipped_offline
             continue
 
         if prioritize_empty:
@@ -210,6 +214,7 @@ def compute_source_targets(config, state):
         source_state["desired_active"] = True
         source_state["target_reason"] = "target"
         source_state["blocked_by"] = None
+        source_state["skipped_offline_tank_ids"] = skipped_offline
         claimed_by[chosen["tank_id"]] = source_id
 
     return state

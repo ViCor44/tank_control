@@ -45,13 +45,18 @@ def enrich_tanks(tanks, tank_states):
     return enriched
 
 
-def enrich_sources(sources, source_states):
+def enrich_sources(sources, source_states, tanks=None):
     source_name_by_id = {s.get("id"): s.get("name", s.get("id")) for s in sources}
+    tank_name_by_id = {}
+    if tanks:
+        tank_name_by_id = {t.get("id"): t.get("name", t.get("id")) for t in tanks}
     enriched = []
 
     for source in sources:
         state = source_states.get(source["id"], {})
         blocked_by_id = state.get("blocked_by")
+        skipped_ids = state.get("skipped_offline_tank_ids", []) or []
+        skipped_names = [tank_name_by_id.get(tid, tid) for tid in skipped_ids]
         enriched.append({
             **source,
             "active": state.get("active", False),
@@ -63,6 +68,8 @@ def enrich_sources(sources, source_states):
             "target_reason": state.get("target_reason"),
             "blocked_by": blocked_by_id,
             "blocked_by_name": source_name_by_id.get(blocked_by_id) if blocked_by_id else None,
+            "skipped_offline_tank_ids": skipped_ids,
+            "skipped_offline_tank_names": skipped_names,
             "last_update": state.get("last_update")
         })
 
@@ -82,7 +89,7 @@ def build_dashboard_data():
     state = load_state()
 
     tanks = enrich_tanks(config.get("tanks", []), state.get("tanks", {}))
-    sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
+    sources = enrich_sources(config.get("sources", []), state.get("sources", {}), tanks=config.get("tanks", []))
     routes = config.get("routes", [])
     alarms = build_tank_alarms(config, state)
 
@@ -377,7 +384,7 @@ def create_app():
         config = load_config()
         state = load_state()
 
-        sources = enrich_sources(config.get("sources", []), state.get("sources", {}))
+        sources = enrich_sources(config.get("sources", []), state.get("sources", {}), tanks=config.get("tanks", []))
         return render_template(
             "sources.html",
             sources=sources,
@@ -473,6 +480,7 @@ def create_app():
 
         enriched_sources = []
         source_states = state.get("sources", {})
+        tank_name_by_id = {t.get("id"): t.get("name", t.get("id")) for t in tanks}
         for source in sources:
             source_id = source.get("id")
             src_state = source_states.get(source_id, {})
@@ -486,6 +494,9 @@ def create_app():
                 blocking_source = get_source_by_id(sources, source_blocked_by_id)
                 if blocking_source:
                     source_blocked_by_name = blocking_source.get("name", source_blocked_by_id)
+
+            skipped_offline_ids = src_state.get("skipped_offline_tank_ids", []) or []
+            skipped_offline_names = [tank_name_by_id.get(tid, tid) for tid in skipped_offline_ids]
 
             steps = []
             for step_index, step in enumerate(source.get("sequence", [])):
@@ -501,6 +512,7 @@ def create_app():
                     "enabled": step.get("enabled", True),
                     "level_percent": tank_state.get("level_percent"),
                     "status": tank_state.get("status", "unknown"),
+                    "sensor_ok": bool(tank_state.get("sensor_ok", False)),
                     "has_route": has_route,
                     "is_current": (current_step_index == step_index) and source_active,
                     "is_target": (current_step_index == step_index) and not source_active,
@@ -528,6 +540,8 @@ def create_app():
                 "blocked_by_name": source_blocked_by_name,
                 "current_tank_name": src_state.get("current_tank_name"),
                 "current_route_relay": src_state.get("current_route_relay", 0),
+                "skipped_offline_tank_ids": skipped_offline_ids,
+                "skipped_offline_tank_names": skipped_offline_names,
             })
 
         return render_template(

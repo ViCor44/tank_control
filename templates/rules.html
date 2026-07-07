@@ -39,10 +39,17 @@
                   <span class="pulse-dot"></span>
                   A encher {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
                 </span>
+                {% if source.skipped_offline_tank_names %}
+                <span class="badge badge-status-critical_low" title="Passos anteriores foram saltados porque o sensor está offline">
+                  saltou: {{ source.skipped_offline_tank_names|join(', ') }} (sensor offline)
+                </span>
+                {% endif %}
               {% elif source.runtime_status == 'waiting' %}
                 <span class="badge badge-status-waiting">A aguardar arranque…</span>
               {% elif source.target_reason == 'blocked' and source.blocked_by_name %}
                 <span class="badge badge-status-blocked">Bloqueada por {{ source.blocked_by_name }}</span>
+              {% elif source.target_reason == 'sensor_offline' %}
+                <span class="badge badge-status-critical_low">Fail-safe — sensor(es) offline: {{ source.skipped_offline_tank_names|join(', ') }}</span>
               {% elif source.target_reason == 'no_route' %}
                 <span class="badge badge-status-no_route">Sem rota</span>
               {% elif source.target_reason == 'no_step' %}
@@ -87,7 +94,8 @@
           <div class="sequence-step {% if step.is_current %}sequence-step-active{% endif %} {% if step.is_target and not step.is_current %}sequence-step-target{% endif %} {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}"
                id="rules-step-{{ source.id }}-{{ loop.index0 }}"
                data-source-id="{{ source.id }}"
-               data-step-index="{{ loop.index0 }}">
+               data-step-index="{{ loop.index0 }}"
+               data-tank-id="{{ step.tank_id }}">
             <div class="sequence-step-header">
               <span class="sequence-step-index">{{ loop.index }}</span>
               <div>
@@ -108,6 +116,9 @@
                   {% if step.level_percent is not none %}· {{ step.level_percent }}%{% endif %}
                   {% if step.status and step.status != 'unknown' %}
                   · <span class="badge-status-{{ step.status }} sequence-status-badge">{{ step.status }}</span>
+                  {% endif %}
+                  {% if step.tank_exists and step.enabled and not step.sensor_ok %}
+                  · <span class="badge badge-status-critical_low" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>
                   {% endif %}
                   {% if not step.tank_exists %}· <span style="color: var(--red);">tanque não existe</span>{% endif %}
                   {% if step.tank_exists and not step.has_route %}· <span style="color: var(--red);">sem rota</span>{% endif %}
@@ -224,13 +235,23 @@
 <script>
 function buildSourceRuntimeBadge(source) {
   if (source.active && source.current_tank_name) {
-    return `<span class="badge badge-filling"><span class="pulse-dot"></span> A encher ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
+    let html = `<span class="badge badge-filling"><span class="pulse-dot"></span> A encher ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
+    const skipped = source.skipped_offline_tank_names || [];
+    if (skipped.length > 0) {
+      html += ` <span class="badge badge-status-critical_low" title="Passos anteriores foram saltados porque o sensor está offline">saltou: ${skipped.join(", ")} (sensor offline)</span>`;
+    }
+    return html;
   }
   if (source.status === "waiting") {
     return `<span class="badge badge-status-waiting">A aguardar arranque…</span>`;
   }
   if (source.target_reason === "blocked" && source.blocked_by_name) {
     return `<span class="badge badge-status-blocked">Bloqueada por ${source.blocked_by_name}</span>`;
+  }
+  if (source.target_reason === "sensor_offline") {
+    const skipped = source.skipped_offline_tank_names || [];
+    const list = skipped.length > 0 ? skipped.join(", ") : "";
+    return `<span class="badge badge-status-critical_low">Fail-safe — sensor(es) offline${list ? ": " + list : ""}</span>`;
   }
   if (source.target_reason === "no_route") {
     return `<span class="badge badge-status-no_route">Sem rota</span>`;
@@ -241,17 +262,25 @@ function buildSourceRuntimeBadge(source) {
   return "";
 }
 
-function buildStepBadge(isCurrent, isTarget) {
+function buildStepBadge(isCurrent, isTarget, sensorOffline) {
+  const parts = [];
   if (isCurrent) {
-    return `<span class="badge badge-filling" style="margin-left: 6px;"><span class="pulse-dot"></span> a encher</span>`;
+    parts.push(`<span class="badge badge-filling" style="margin-left: 6px;"><span class="pulse-dot"></span> a encher</span>`);
+  } else if (isTarget) {
+    parts.push(`<span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>`);
   }
-  if (isTarget) {
-    return `<span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>`;
+  if (sensorOffline) {
+    parts.push(`<span class="badge badge-status-critical_low" style="margin-left: 6px;" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>`);
   }
-  return "";
+  return parts.join("");
 }
 
 function updateRulesRuntime(data) {
+  const sensorOkByTankId = {};
+  (data.tanks || []).forEach(tank => {
+    sensorOkByTankId[tank.id] = Boolean(tank.sensor_ok);
+  });
+
   (data.sources || []).forEach(source => {
     const runtimeEl = document.getElementById(`rules-source-runtime-${source.id}`);
     if (runtimeEl) {
@@ -271,7 +300,9 @@ function updateRulesRuntime(data) {
 
       const badgeEl = document.getElementById(`rules-step-badge-${source.id}-${idx}`);
       if (badgeEl) {
-        badgeEl.innerHTML = buildStepBadge(isCurrent, isTarget);
+        const tankId = el.dataset.tankId;
+        const sensorOffline = tankId ? sensorOkByTankId[tankId] === false : false;
+        badgeEl.innerHTML = buildStepBadge(isCurrent, isTarget, sensorOffline);
       }
     });
   });
