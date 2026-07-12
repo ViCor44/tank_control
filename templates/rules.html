@@ -109,6 +109,9 @@
                     {% elif step.is_target %}
                       <span class="badge badge-status-waiting" style="margin-left: 6px;">a aguardar</span>
                     {% endif %}
+                    {% if step.tank_exists and step.enabled and not step.sensor_ok %}
+                      <span class="badge badge-status-critical_low" style="margin-left: 6px;" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>
+                    {% endif %}
                   </span>
                 </div>
                 <div class="sequence-step-meta">
@@ -116,9 +119,6 @@
                   {% if step.level_percent is not none %}· {{ step.level_percent }}%{% endif %}
                   {% if step.status and step.status != 'unknown' %}
                   · <span class="badge-status-{{ step.status }} sequence-status-badge">{{ step.status }}</span>
-                  {% endif %}
-                  {% if step.tank_exists and step.enabled and not step.sensor_ok %}
-                  · <span class="badge badge-status-critical_low" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>
                   {% endif %}
                   {% if not step.tank_exists %}· <span style="color: var(--red);">tanque não existe</span>{% endif %}
                   {% if step.tank_exists and not step.has_route %}· <span style="color: var(--red);">sem rota</span>{% endif %}
