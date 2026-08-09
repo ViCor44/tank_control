@@ -189,7 +189,7 @@ select {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
+  gap: 12px;
   margin-bottom: 0;
 }
 
@@ -197,7 +197,7 @@ select {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 18px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -222,13 +222,13 @@ select {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
   margin-bottom: 0;
 }
 
 .panel h3 {
   margin-top: 0;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .table-wrap {
@@ -270,19 +270,19 @@ select {
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
 }
 
 .scada-card {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 16px;
+  padding: 12px 14px;
 }
 
 .scada-card p {
-  margin: 8px 0;
+  margin: 5px 0;
   color: var(--text);
 }
 
@@ -290,7 +290,7 @@ select {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 9px;
 }
 
 .card-top h4 {
@@ -299,7 +299,7 @@ select {
 
 .badge {
   display: inline-block;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: bold;
@@ -356,8 +356,8 @@ select {
 }
 
 .tank-activity {
-  margin: 6px 0 10px;
-  min-height: 24px;
+  margin: 4px 0 7px;
+  min-height: 20px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -417,13 +417,13 @@ select {
 }
 
 .source-target {
-  margin: 6px 0 10px;
-  min-height: 24px;
+  margin: 4px 0 7px;
+  min-height: 20px;
 }
 
 .tank-level {
   display: flex;
-  gap: 18px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -465,9 +465,9 @@ select {
 }
 
 .tank-percent {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: bold;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .alarm-list {
@@ -567,7 +567,7 @@ select {
   color: #7dd3fc;
   border: 1px solid rgba(56, 189, 248, 0.4);
   text-decoration: none;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 10px;
   font-weight: bold;
   cursor: pointer;
@@ -581,6 +581,19 @@ select {
   background: rgba(148, 163, 184, 0.12);
   color: #cbd5e1;
   border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.card-actions form {
+  display: inline-flex;
+  margin: 0;
 }
 
 .action-button-danger {
@@ -666,17 +679,17 @@ select {
 .sequence-list {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .sequence-source {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 18px;
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .sequence-source-header {
@@ -1045,12 +1058,12 @@ select {
 .route-row {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 9px 12px;
 }
 
 .route-row-disabled {
