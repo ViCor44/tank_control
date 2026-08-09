@@ -52,6 +52,15 @@ select {
   -webkit-overflow-scrolling: touch;
 }
 
+.drag-scroll-ready {
+  cursor: grab;
+}
+
+.drag-scroll-active,
+.drag-scroll-active * {
+  cursor: grabbing !important;
+}
+
 /* Touch-friendly scrollbars (visible on 15" touch monitor) */
 *::-webkit-scrollbar {
   width: 14px;

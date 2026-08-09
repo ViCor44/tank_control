@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}tank_control{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260809-scroll') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260809-drag-scroll') }}">
 </head>
 <body>
   <aside class="sidebar">
@@ -29,5 +29,74 @@
   <main class="content">
     {% block content %}{% endblock %}
   </main>
+
+  <script>
+  (() => {
+    const interactive = "a, button, input, select, textarea, label, [role='button']";
+    let drag = null;
+    let suppressClick = false;
+
+    function scrollParent(element) {
+      for (let node = element; node && node !== document.body; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        const canScrollY = /(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight;
+        const canScrollX = /(auto|scroll)/.test(style.overflowX) && node.scrollWidth > node.clientWidth;
+        if (canScrollY || canScrollX) return node;
+      }
+      return null;
+    }
+
+    document.addEventListener("pointerdown", (event) => {
+      if (event.pointerType === "touch" || event.button !== 0 || event.target.closest(interactive)) return;
+      const card = event.target.closest(".scada-card, .panel, .route-card, .sequence-source");
+      if (!card) return;
+
+      const scroller = scrollParent(card);
+      if (!scroller) return;
+
+      drag = {
+        pointerId: event.pointerId,
+        scroller,
+        startX: event.clientX,
+        startY: event.clientY,
+        scrollLeft: scroller.scrollLeft,
+        scrollTop: scroller.scrollTop,
+        moved: false
+      };
+      card.setPointerCapture(event.pointerId);
+      scroller.classList.add("drag-scroll-ready");
+    });
+
+    document.addEventListener("pointermove", (event) => {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      const deltaX = event.clientX - drag.startX;
+      const deltaY = event.clientY - drag.startY;
+
+      if (!drag.moved && Math.hypot(deltaX, deltaY) < 5) return;
+      drag.moved = true;
+      event.preventDefault();
+      drag.scroller.classList.add("drag-scroll-active");
+      drag.scroller.scrollLeft = drag.scrollLeft - deltaX;
+      drag.scroller.scrollTop = drag.scrollTop - deltaY;
+    }, { passive: false });
+
+    function stopDrag(event) {
+      if (!drag || event.pointerId !== drag.pointerId) return;
+      suppressClick = drag.moved;
+      if (suppressClick) window.setTimeout(() => { suppressClick = false; }, 0);
+      drag.scroller.classList.remove("drag-scroll-active", "drag-scroll-ready");
+      drag = null;
+    }
+
+    document.addEventListener("pointerup", stopDrag);
+    document.addEventListener("pointercancel", stopDrag);
+    document.addEventListener("click", (event) => {
+      if (!suppressClick) return;
+      event.preventDefault();
+      event.stopPropagation();
+      suppressClick = false;
+    }, true);
+  })();
+  </script>
 </body>
 </html>
