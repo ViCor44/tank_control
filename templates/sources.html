@@ -21,6 +21,10 @@
   </div>
 </div>
 
+{% if page_error %}
+<div class="page-alert page-alert-error" role="alert">{{ page_error }}</div>
+{% endif %}
+
 <div class="card-grid">
   {% for source in sources %}
   <div class="scada-card" id="source-card-{{ source.id }}">
@@ -55,8 +59,13 @@
       <p><strong>Relé da fonte:</strong> {{ source.enable_relay if source.enable_relay is not none else '-' }}</p>
       <p><strong>Ativa:</strong> <span id="source-active-{{ source.id }}">{{ "Sim" if source.active else "Não" }}</span></p>
       <p><strong>Atualizado:</strong> <span id="source-last-update-{{ source.id }}">{{ source.last_update or "-" }}</span></p>
-      <p>
+      <p style="display: flex; gap: 8px; flex-wrap: wrap;">
         <a class="action-button" href="{{ url_for('edit_source', source_id=source.id) }}">Editar</a>
+        <form method="post" action="{{ url_for('delete_source', source_id=source.id) }}"
+              onsubmit="return confirm('Eliminar definitivamente a fonte {{ source.name }} ({{ source.id }})? Todas as rotas associadas também serão removidas.');"
+              style="display: inline;">
+          <button type="submit" class="action-button action-button-danger">Eliminar</button>
+        </form>
       </p>
     </div>
   </div>

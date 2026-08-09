@@ -477,7 +477,8 @@ def create_app():
             "sources.html",
             sources=sources,
             source_count=len(sources),
-            state_last_updated=state.get("state_last_updated")
+            state_last_updated=state.get("state_last_updated"),
+            page_error=request.args.get("error"),
         )
 
     @app.route("/sources/new", methods=["GET", "POST"])
@@ -550,6 +551,49 @@ def create_app():
             form_mode="edit",
             relay_options=get_available_relay_options(config, include=[current_enable], exclude=[source]),
         )
+
+    @app.route("/sources/<source_id>/delete", methods=["POST"])
+    def delete_source(source_id):
+        config = load_config()
+        sources = config.get("sources", [])
+        source = get_source_by_id(sources, source_id)
+
+        if source is None:
+            return "Source not found", 404
+
+        if source.get("enabled", False):
+            return redirect(url_for(
+                "sources_page",
+                error=f"Desative a fonte {source_id} antes de a eliminar.",
+            ))
+
+        state = load_state()
+        source_state = state.get("sources", {}).get(source_id, {})
+        if source_state.get("active", False):
+            return redirect(url_for(
+                "sources_page",
+                error=f"A fonte {source_id} ainda tem o relé ativo. Aguarde uma atualização do sistema e tente novamente.",
+            ))
+
+        sources.remove(source)
+        config["routes"] = [
+            route for route in config.get("routes", [])
+            if route.get("source_id") != source_id
+        ]
+
+        state.get("sources", {}).pop(source_id, None)
+        for tank_state in state.get("tanks", {}).values():
+            if tank_state.get("filling_by") == source_id:
+                tank_state.pop("filling_by", None)
+                tank_state.pop("filling_by_name", None)
+            tank_state["filling_by_sources"] = [
+                item for item in tank_state.get("filling_by_sources", [])
+                if item.get("id") != source_id
+            ]
+
+        save_config(config)
+        save_state(state)
+        return redirect(url_for("sources_page"))
 
     @app.route("/rules")
     def rules_page():
