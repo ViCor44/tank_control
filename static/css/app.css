@@ -734,21 +734,28 @@ select {
 .sequence-chain {
   display: flex;
   flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 8px;
   padding: 6px 2px 2px;
 }
 
 .sequence-source-pill {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
+  justify-content: center;
+  width: 120px;
+  height: 96px;
+  flex: 0 0 120px;
+  padding: 10px;
   background: rgba(56, 189, 248, 0.15);
   color: #7dd3fc;
   border: 1px solid rgba(56, 189, 248, 0.5);
-  border-radius: 999px;
+  border-radius: 48px;
   font-weight: bold;
-  white-space: nowrap;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .sequence-arrow {
@@ -766,8 +773,8 @@ select {
 }
 
 .sequence-step {
-  width: 240px;
-  flex: 0 0 240px;
+  width: 230px;
+  flex: 0 0 230px;
   box-sizing: border-box;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -862,6 +869,15 @@ select {
 .sequence-step-name {
   font-weight: 600;
   color: var(--text);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.sequence-link {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .sequence-step-meta {

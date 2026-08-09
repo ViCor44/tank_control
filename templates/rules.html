@@ -90,8 +90,9 @@
 
         {% if source.steps %}
           {% for step in source.steps %}
-          <div class="sequence-arrow">→</div>
-          <div class="sequence-step {% if step.is_current %}sequence-step-active{% endif %} {% if step.is_target and not step.is_current %}sequence-step-target{% endif %} {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}"
+          <div class="sequence-link">
+            <div class="sequence-arrow">→</div>
+            <div class="sequence-step {% if step.is_current %}sequence-step-active{% endif %} {% if step.is_target and not step.is_current %}sequence-step-target{% endif %} {% if not step.enabled %}sequence-step-disabled{% endif %} {% if not step.tank_exists %}sequence-step-missing{% endif %} {% if step.tank_exists and not step.has_route %}sequence-step-missing{% endif %}"
                id="rules-step-{{ source.id }}-{{ loop.index0 }}"
                data-source-id="{{ source.id }}"
                data-step-index="{{ loop.index0 }}"
@@ -173,6 +174,7 @@
 
               <button type="submit" class="icon-button threshold-save" title="Guardar limites">💾</button>
             </form>
+            </div>
           </div>
           {% endfor %}
 
