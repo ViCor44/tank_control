@@ -21,6 +21,10 @@
   </div>
 </div>
 
+{% if page_error %}
+<div class="page-alert page-alert-error" role="alert">{{ page_error }}</div>
+{% endif %}
+
 <div class="card-grid">
   {% for tank in tanks %}
   <div class="scada-card" id="tank-card-{{ tank.id }}">
@@ -57,6 +61,11 @@
                 onsubmit="return confirm('Reset ao filtro do sensor do {{ tank.name }}? A próxima leitura será aceite mesmo que seja muito diferente da anterior.');"
                 style="display: inline;">
             <button type="submit" class="action-button" title="Limpa a última leitura e o contador de spikes. Útil depois de trocar/mover o sensor.">Reset sensor</button>
+          </form>
+          <form method="post" action="{{ url_for('delete_tank', tank_id=tank.id) }}"
+                onsubmit="return confirm('Eliminar definitivamente o tanque {{ tank.name }} ({{ tank.id }})? As rotas e os passos de sequência associados também serão removidos.');"
+                style="display: inline;">
+            <button type="submit" class="action-button action-button-danger">Eliminar</button>
           </form>
         </p>
       </div>

@@ -298,7 +298,8 @@ def create_app():
             "tanks.html",
             tanks=tanks,
             tank_count=len(tanks),
-            state_last_updated=state.get("state_last_updated")
+            state_last_updated=state.get("state_last_updated"),
+            page_error=request.args.get("error"),
         )
 
     @app.route("/tanks/new", methods=["GET", "POST"])
@@ -423,6 +424,48 @@ def create_app():
 
         # Return to wherever the user was (tanks page / dashboard).
         return redirect(request.referrer or url_for("tanks_page"))
+
+    @app.route("/tanks/<tank_id>/delete", methods=["POST"])
+    def delete_tank(tank_id):
+        config = load_config()
+        tanks = config.get("tanks", [])
+        tank = get_tank_by_id(tanks, tank_id)
+
+        if tank is None:
+            return "Tank not found", 404
+
+        if tank.get("enabled", False):
+            return redirect(url_for(
+                "tanks_page",
+                error=f"Desative o tanque {tank_id} antes de o eliminar.",
+            ))
+
+        state = load_state()
+        tank_state = state.get("tanks", {}).get(tank_id, {})
+        if tank_state.get("relay_empty_on") or tank_state.get("relay_full_on") or tank_state.get("filling_by"):
+            return redirect(url_for(
+                "tanks_page",
+                error=f"O tanque {tank_id} ainda tem relés ativos. Aguarde uma atualização do sistema e tente novamente.",
+            ))
+
+        tanks.remove(tank)
+
+        # Remove every configuration reference so no orphan route or sequence
+        # can attempt to control a tank that no longer exists.
+        config["routes"] = [
+            route for route in config.get("routes", [])
+            if route.get("tank_id") != tank_id
+        ]
+        for source in config.get("sources", []):
+            source["sequence"] = [
+                step for step in source.get("sequence", [])
+                if step.get("tank_id") != tank_id
+            ]
+
+        state.get("tanks", {}).pop(tank_id, None)
+        save_config(config)
+        save_state(state)
+        return redirect(url_for("tanks_page"))
 
     @app.route("/sources")
     def sources_page():
