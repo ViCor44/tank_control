@@ -17,7 +17,7 @@
   </div>
 </div>
 
-<div class="stats-grid">
+<div class="stats-grid dashboard-stats">
   <div class="stat-card">
     <span class="stat-label">Tanques</span>
     <span class="stat-value" id="tank-count">{{ tank_count }}</span>
@@ -36,7 +36,7 @@
   </div>
 </div>
 
-<div class="panel">
+<div class="panel dashboard-alarms">
   <h3>Alarmes ativos</h3>
   <div class="alarm-list" id="alarm-list">
     {% if alarms %}
@@ -59,7 +59,7 @@
   </div>
 </div>
 
-<div class="panel">
+<div class="panel dashboard-tanks">
   <h3>Tanques</h3>
   <div class="card-grid" id="tank-grid">
     {% for tank in tanks %}
