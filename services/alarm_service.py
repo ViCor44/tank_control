@@ -44,7 +44,7 @@ def build_tank_alarms(config, state):
                 "severity": SEVERITY_HIGH,
                 "message": message,
                 "tank_id": tank_id,
-                "level_percent": level_percent,
+                "level_percent": None,
                 "detected_at": last_update or now_iso(),
             })
             continue

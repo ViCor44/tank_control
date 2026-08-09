@@ -19,7 +19,8 @@ def enrich_tanks(tanks, tank_states):
     for tank in tanks:
         state = tank_states.get(tank["id"], {})
         calibration = tank.get("calibration", {})
-        volume_liters = state.get("volume_liters")
+        sensor_ok = bool(state.get("sensor_ok", False))
+        volume_liters = state.get("volume_liters") if sensor_ok else None
         volume_m3 = round(volume_liters / 1000, 2) if volume_liters is not None else None
 
         enriched.append({
@@ -30,12 +31,12 @@ def enrich_tanks(tanks, tank_states):
                 "distance_empty_cm": calibration.get("distance_empty_cm", 150),
                 "distance_full_cm": calibration.get("distance_full_cm", 20),
             },
-            "level_percent": state.get("level_percent", 0),
-            "status": state.get("status", "unknown"),
-            "distance_cm": state.get("distance_cm"),
+            "level_percent": state.get("level_percent") if sensor_ok else None,
+            "status": state.get("status", "unknown") if sensor_ok else "unknown",
+            "distance_cm": state.get("distance_cm") if sensor_ok else None,
             "volume_liters": volume_liters,
             "volume_m3": volume_m3,
-            "sensor_ok": state.get("sensor_ok", False),
+            "sensor_ok": sensor_ok,
             "last_update": state.get("last_update"),
             "filling_by": state.get("filling_by"),
             "filling_by_name": state.get("filling_by_name"),
@@ -637,14 +638,15 @@ def create_app():
                 tank_state = tank_states.get(tank_id, {})
                 route = find_route(routes, source_id, tank_id)
                 has_route = route is not None and (route.get("valve_relay", 0) or 0) > 0
+                sensor_ok = bool(tank_state.get("sensor_ok", False))
                 steps.append({
                     "tank_id": tank_id,
                     "tank_name": tank.get("name", tank_id) if tank else tank_id,
                     "tank_exists": tank is not None,
                     "enabled": step.get("enabled", True),
-                    "level_percent": tank_state.get("level_percent"),
-                    "status": tank_state.get("status", "unknown"),
-                    "sensor_ok": bool(tank_state.get("sensor_ok", False)),
+                    "level_percent": tank_state.get("level_percent") if sensor_ok else None,
+                    "status": tank_state.get("status", "unknown") if sensor_ok else "unknown",
+                    "sensor_ok": sensor_ok,
                     "has_route": has_route,
                     "is_current": (current_step_index == step_index) and source_active,
                     "is_target": (current_step_index == step_index) and not source_active,
