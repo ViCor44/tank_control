@@ -2,7 +2,7 @@
   "system": {
     "decision_interval_seconds": 5,
     "safe_mode_on_error": true,
-    "sensor_request_timeout_seconds": 2,
+    "sensor_request_timeout_seconds": 5,
     "poll_interval_seconds": 5,
     "default_hysteresis_cm": 10,
     "default_source_startup_delay_seconds": 0,

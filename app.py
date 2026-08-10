@@ -968,7 +968,7 @@ def create_app():
             "poll_interval_seconds", system.get("poll_interval_seconds", 5)
         )
         system["sensor_request_timeout_seconds"] = _float_or_default(
-            "sensor_request_timeout_seconds", system.get("sensor_request_timeout_seconds", 2)
+            "sensor_request_timeout_seconds", system.get("sensor_request_timeout_seconds", 5)
         )
         system["default_hysteresis_cm"] = _float_or_default(
             "default_hysteresis_cm", system.get("default_hysteresis_cm", 0)
