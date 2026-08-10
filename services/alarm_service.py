@@ -25,19 +25,28 @@ def build_tank_alarms(config, state):
         status = tank_state.get("status")
         level_percent = tank_state.get("level_percent")
         sensor_ok = tank_state.get("sensor_ok", False)
+        reading_valid = tank_state.get("sensor_reading_valid", sensor_ok)
         last_update = tank_state.get("last_update")
-        last_error = tank_state.get("last_error")
-
         if not sensor_ok and status != "disabled":
-            if last_error == "sensor_spike_persistent":
-                message = (
-                    f"Tanque {tank_name}: leituras instáveis do sensor "
-                    f"(variação > {tank_state.get('last_spike_delta_cm', '?')} cm) — bloqueado"
-                )
-                alarm_id = f"tank_{tank_id}_sensor_unstable"
-            else:
-                message = f"Tanque {tank_name}: sensor offline"
-                alarm_id = f"tank_{tank_id}_sensor_offline"
+            message = f"Tanque {tank_name}: sensor offline"
+            alarm_id = f"tank_{tank_id}_sensor_offline"
+
+            alarms.append({
+                "id": alarm_id,
+                "severity": SEVERITY_HIGH,
+                "message": message,
+                "tank_id": tank_id,
+                "level_percent": None,
+                "detected_at": last_update or now_iso(),
+            })
+            continue
+
+        if not reading_valid and status != "disabled":
+            message = (
+                f"Tanque {tank_name}: leituras instáveis do sensor "
+                f"(variação > {tank_state.get('last_spike_delta_cm', '?')} cm) — bloqueado"
+            )
+            alarm_id = f"tank_{tank_id}_sensor_unstable"
 
             alarms.append({
                 "id": alarm_id,

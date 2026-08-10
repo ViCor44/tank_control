@@ -134,6 +134,11 @@ def compute_source_targets(config, state):
                 last_reject_reason = ("sensor_offline", None)
                 continue
 
+            # Reachable and trustworthy are separate concepts. An unstable
+            # sensor remains online in the UI but must not drive automation.
+            if not tank_state.get("sensor_reading_valid", tank_state.get("sensor_ok", False)):
+                continue
+
             # Only skip when the tank is in a state we can't act on.
             if status in (None, "unknown", "disabled"):
                 continue
@@ -246,7 +251,10 @@ def apply_tank_level_relays(config, state):
         prev_empty_on = bool(tank_state.get("relay_empty_on", False))
         prev_full_on = bool(tank_state.get("relay_full_on", False))
 
-        if not tank.get("enabled", False) or not tank_state.get("sensor_ok", False):
+        reading_valid = tank_state.get(
+            "sensor_reading_valid", tank_state.get("sensor_ok", False)
+        )
+        if not tank.get("enabled", False) or not reading_valid:
             if empty_relay > 0:
                 relay_results.append(relay_service.relay_off(empty_relay))
             if full_relay > 0:

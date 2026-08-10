@@ -1112,8 +1112,10 @@ def create_app():
 
 
 app = create_app()
+# Start sensor discovery regardless of how Flask is hosted (``python app.py``,
+# ``flask run`` or a WSGI server). The helper is idempotent inside the process.
+start_background_poller()
 
 
 if __name__ == "__main__":
-    start_background_poller()
     app.run(host="0.0.0.0", port=5000, debug=False)

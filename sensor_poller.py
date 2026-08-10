@@ -76,6 +76,7 @@ def update_tank_states():
 
         if not tank.get("enabled", False):
             state["tanks"][tank_id]["sensor_ok"] = False
+            state["tanks"][tank_id]["sensor_reading_valid"] = False
             state["tanks"][tank_id]["status"] = "disabled"
             state["tanks"][tank_id]["consecutive_spike_count"] = 0
             state["tanks"][tank_id]["last_update"] = now_iso()
@@ -86,6 +87,9 @@ def update_tank_states():
 
             if reading.get("ok"):
                 tank_state = state["tanks"][tank_id]
+                # "Online" is determined by this very same successful request
+                # that returned distance_cm, independently of the spike filter.
+                tank_state["sensor_ok"] = True
                 filter_result = apply_sensor_spike_filter(
                     tank_state,
                     reading["distance_cm"],
@@ -107,6 +111,7 @@ def update_tank_states():
                         "volume_liters": reading["volume_liters"],
                         "status": status,
                         "sensor_ok": True,
+                        "sensor_reading_valid": True,
                         "consecutive_spike_count": 0,
                         "last_raw_distance_cm": reading["distance_cm"],
                         "last_spike_delta_cm": None,
@@ -116,6 +121,7 @@ def update_tank_states():
 
                 elif filter_result["status"] == "rejected":
                     # Transient spike — keep previous stable values.
+                    tank_state["sensor_reading_valid"] = True
                     tank_state["consecutive_spike_count"] = filter_result["count"]
                     tank_state["last_raw_distance_cm"] = reading["distance_cm"]
                     tank_state["last_spike_delta_cm"] = filter_result["delta_cm"]
@@ -125,17 +131,21 @@ def update_tank_states():
                     tank_state["consecutive_spike_count"] = filter_result["count"]
                     tank_state["last_raw_distance_cm"] = reading["distance_cm"]
                     tank_state["last_spike_delta_cm"] = filter_result["delta_cm"]
-                    tank_state["sensor_ok"] = False
+                    # The controller answered and supplied distance_cm, so it is
+                    # online; only the measurement is unsafe for control.
+                    tank_state["sensor_reading_valid"] = False
                     tank_state["status"] = "unknown"
                     tank_state["last_error"] = "sensor_spike_persistent"
                     tank_state["last_update"] = now_iso()
             else:
                 state["tanks"][tank_id]["sensor_ok"] = False
+                state["tanks"][tank_id]["sensor_reading_valid"] = False
                 state["tanks"][tank_id]["last_error"] = reading.get("error", "unknown_error")
                 state["tanks"][tank_id]["last_update"] = now_iso()
 
         except Exception as e:
             state["tanks"][tank_id]["sensor_ok"] = False
+            state["tanks"][tank_id]["sensor_reading_valid"] = False
             state["tanks"][tank_id]["last_error"] = str(e)
             state["tanks"][tank_id]["last_update"] = now_iso()
 
