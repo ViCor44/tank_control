@@ -58,7 +58,7 @@ def compute_source_targets(config, state):
       - current_step_index
       - current_route_relay: valve relay for the selected route (or 0)
       - desired_active: True if a target was found and enabled_relay > 0
-      - target_reason: short string ("target"|"no_step"|"disabled"|"no_route"|"blocked")
+      - target_reason: short string ("target"|"all_full"|"no_step"|"disabled"|"no_route"|"blocked")
     """
     rules = config.get("rules", {})
     skip_full = bool(rules.get("skip_full_tanks", True))
@@ -101,6 +101,8 @@ def compute_source_targets(config, state):
         sequence = source.get("sequence", []) or []
 
         candidates = []
+        considered_tanks = 0
+        full_tanks = 0
         last_reject_reason = None  # (reason, blocked_by) for UI feedback when nothing eligible
         skipped_offline = []  # tank_ids in this source's sequence whose sensor is offline
 
@@ -119,6 +121,7 @@ def compute_source_targets(config, state):
             tank_state = tank_states.get(tank_id, {})
             status = tank_state.get("status")
             level_percent = tank_state.get("level_percent")
+            considered_tanks += 1
 
             # Fail-safe: if the tank sensor is offline we cannot know the real
             # level, so we must never keep (or start) filling it. Any source
@@ -136,6 +139,7 @@ def compute_source_targets(config, state):
                 continue
 
             if skip_full and status == "full":
+                full_tanks += 1
                 continue
 
             # Per-step thresholds with hysteresis:
@@ -191,7 +195,9 @@ def compute_source_targets(config, state):
             })
 
         if not candidates:
-            if last_reject_reason is not None:
+            if skip_full and considered_tanks > 0 and full_tanks == considered_tanks:
+                source_state["target_reason"] = "all_full"
+            elif last_reject_reason is not None:
                 source_state["target_reason"] = last_reject_reason[0]
                 source_state["blocked_by"] = last_reject_reason[1]
             else:
@@ -343,7 +349,14 @@ def apply_source_relays(config, state):
                 source_state["desired_active_since"] = now.isoformat()
 
             elapsed = (now - since).total_seconds()
-            required = startup_delay if desired_active else stop_delay
+            # Hard safety conditions bypass a configured stop delay. The
+            # source relay must open as soon as every tank is full or the
+            # selected path can no longer be operated safely.
+            safety_stop = (
+                not desired_active
+                and source_state.get("target_reason") in ("all_full", "sensor_offline", "no_route")
+            )
+            required = startup_delay if desired_active else (0 if safety_stop else stop_delay)
 
             if elapsed >= required:
                 applied_active = desired_active
@@ -416,7 +429,13 @@ def apply_source_relays(config, state):
 
         source_state["pending_valve_close"] = pending_valve_close
 
-        # Emit valve commands for every route belonging to this source.
+        # On stop, open the source enable relay BEFORE touching any route
+        # valve. This avoids briefly dead-heading a high-pressure source.
+        if not applied_active and enable_relay > 0:
+            relay_results.append(relay_service.relay_off(enable_relay))
+
+        # Emit valve commands for every route belonging to this source. On
+        # startup these are deliberately sent before the source is enabled.
         for route in source_routes:
             vr = int(route.get("valve_relay", 0) or 0)
             if vr <= 0:
@@ -426,14 +445,10 @@ def apply_source_relays(config, state):
             else:
                 relay_results.append(relay_service.relay_off(vr))
 
-        # Source enable relay: OFF the moment we go inactive, ON while active.
-        # The valve-close-delay above guarantees the pump stops before the
-        # remaining valve closes.
-        if enable_relay > 0:
-            if applied_active:
-                relay_results.append(relay_service.relay_on(enable_relay))
-            else:
-                relay_results.append(relay_service.relay_off(enable_relay))
+        # On startup, enable the source only after its route valve is open.
+        # The OFF command was already sent above before valve commands.
+        if applied_active and enable_relay > 0:
+            relay_results.append(relay_service.relay_on(enable_relay))
 
         # Status derivation for UI
         reason = source_state.get("target_reason", "idle")
@@ -449,6 +464,8 @@ def apply_source_relays(config, state):
             source_state["status"] = "no_route"
         elif reason == "sensor_offline":
             source_state["status"] = "sensor_offline"
+        elif reason == "all_full":
+            source_state["status"] = "all_full"
         elif reason in ("no_step", "idle"):
             source_state["status"] = "idle"
         else:

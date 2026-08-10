@@ -52,6 +52,8 @@
                 <span class="badge badge-status-critical_low">Fail-safe — sensor(es) offline: {{ source.skipped_offline_tank_names|join(', ') }}</span>
               {% elif source.target_reason == 'no_route' %}
                 <span class="badge badge-status-no_route">Sem rota</span>
+              {% elif source.target_reason == 'all_full' %}
+                <span class="badge badge-status-all_full">Todos cheios — fonte parada</span>
               {% elif source.target_reason == 'no_step' %}
                 <span class="badge badge-idle">Sem tanques a precisar</span>
               {% endif %}
@@ -257,6 +259,9 @@ function buildSourceRuntimeBadge(source) {
   }
   if (source.target_reason === "no_route") {
     return `<span class="badge badge-status-no_route">Sem rota</span>`;
+  }
+  if (source.target_reason === "all_full") {
+    return `<span class="badge badge-status-all_full">Todos cheios — fonte parada</span>`;
   }
   if (source.target_reason === "no_step") {
     return `<span class="badge badge-idle">Sem tanques a precisar</span>`;

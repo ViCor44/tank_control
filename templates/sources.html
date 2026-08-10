@@ -45,6 +45,8 @@
         <span class="badge badge-status-critical_low">Fail-safe — sensor do tanque alvo offline</span>
       {% elif source.target_reason == 'no_route' %}
         <span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>
+      {% elif source.target_reason == 'all_full' %}
+        <span class="badge badge-status-all_full">Todos os tanques cheios — fonte parada</span>
       {% elif source.target_reason == 'no_step' %}
         <span class="badge badge-idle">Sem tanques a precisar de água</span>
       {% elif source.target_reason == 'disabled' %}
@@ -153,6 +155,8 @@ function updateSourcesPage(data) {
         html = `<span class="badge badge-status-critical_low">Fail-safe — sensor do tanque alvo offline</span>`;
       } else if (source.target_reason === "no_route") {
         html = `<span class="badge badge-status-critical_low">Sem rota configurada para o próximo tanque</span>`;
+      } else if (source.target_reason === "all_full") {
+        html = `<span class="badge badge-status-all_full">Todos os tanques cheios — fonte parada</span>`;
       } else if (source.target_reason === "no_step") {
         html = `<span class="badge badge-idle">Sem tanques a precisar de água</span>`;
       } else if (source.target_reason === "disabled") {
