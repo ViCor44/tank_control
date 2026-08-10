@@ -1,10 +1,10 @@
-import json
+import logging
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 from datetime import datetime, timezone
 
-from services.config_service import load_config, load_state
+from services.config_service import load_config, load_state, save_state
 from services.tank_service import (
     apply_sensor_spike_filter,
     calculate_tank_status,
@@ -14,17 +14,13 @@ from services.control_service import apply_tank_level_relays, apply_source_relay
 from services.alarm_service import build_tank_alarms
 
 
-BASE_DIR = Path(__file__).resolve().parent
-STATE_PATH = BASE_DIR / "config" / "state.json"
+logger = logging.getLogger(__name__)
+_poller_thread = None
+_poller_lock = threading.Lock()
 
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
-
-
-def save_state(state):
-    with open(STATE_PATH, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, ensure_ascii=False)
 
 
 def read_sensors_parallel(tanks, timeout_seconds):
@@ -150,18 +146,44 @@ def update_tank_states():
     save_state(state)
 
 
-def main():
+def poll_forever():
     while True:
         cycle_started = time.monotonic()
-        update_tank_states()
-        config = load_config()
-        interval = float(
-            config.get("system", {}).get("poll_interval_seconds", 5) or 5
-        )
+        interval = 5.0
+        try:
+            update_tank_states()
+            config = load_config()
+            interval = float(
+                config.get("system", {}).get("poll_interval_seconds", 5) or 5
+            )
+        except Exception:
+            # A temporary network/configuration error must not permanently stop
+            # sensor discovery. The next cycle tries again automatically.
+            logger.exception("Erro no ciclo de leitura dos sensores")
         # Keep a start-to-start cadence. Previously the sensor/network work
         # was added on top of the configured interval.
         elapsed = time.monotonic() - cycle_started
         time.sleep(max(0.1, interval - elapsed))
+
+
+def start_background_poller():
+    """Start exactly one sensor polling thread in this Python process."""
+    global _poller_thread
+    with _poller_lock:
+        if _poller_thread is not None and _poller_thread.is_alive():
+            return _poller_thread
+
+        _poller_thread = threading.Thread(
+            target=poll_forever,
+            name="sensor-poller",
+            daemon=True,
+        )
+        _poller_thread.start()
+        return _poller_thread
+
+
+def main():
+    poll_forever()
 
 
 if __name__ == "__main__":

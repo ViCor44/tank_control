@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from services.config_service import load_config, load_state, save_config, save_state
 from services.alarm_service import build_tank_alarms
+from sensor_poller import start_background_poller
 from services.relay_inventory import (
     get_available_relay_options,
     get_used_relays,
@@ -1114,4 +1115,5 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    start_background_poller()
     app.run(host="0.0.0.0", port=5000, debug=False)
