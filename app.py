@@ -14,6 +14,38 @@ from services.relay_inventory import (
 )
 
 
+def format_sensor_error(error):
+    """Convert internal request/parser errors into concise operator messages."""
+    if not error:
+        return None
+
+    value = str(error)
+    lowered = value.lower()
+
+    if "sensor_spike_persistent" in lowered:
+        return "Sensor ligado, mas as leituras estão instáveis."
+    if "missing_endpoint" in lowered:
+        return "O endereço do sensor não está configurado."
+    if "unsupported_method" in lowered:
+        return "O método HTTP configurado não é suportado."
+    if "missing_level_key" in lowered:
+        return "O sensor respondeu, mas não enviou a distância esperada."
+    if "connecttimeout" in lowered or "connection timed out" in lowered:
+        return "Sem resposta do sensor dentro do tempo limite."
+    if "read timed out" in lowered or "readtimeout" in lowered:
+        return "O sensor demorou demasiado tempo a responder."
+    if "connection refused" in lowered or "newconnectionerror" in lowered:
+        return "Não foi possível estabelecer ligação ao sensor."
+    if "json" in lowered or "expecting value" in lowered:
+        return "O sensor respondeu num formato inválido."
+    if "404" in lowered:
+        return "O endereço configurado não existe no sensor."
+    if "500" in lowered or "502" in lowered or "503" in lowered:
+        return "O sensor respondeu com um erro interno."
+
+    return "Não foi possível obter a leitura do sensor."
+
+
 def enrich_tanks(tanks, tank_states):
     enriched = []
 
@@ -39,6 +71,7 @@ def enrich_tanks(tanks, tank_states):
             "volume_m3": volume_m3,
             "sensor_ok": sensor_ok,
             "last_error": state.get("last_error"),
+            "sensor_error_message": format_sensor_error(state.get("last_error")),
             "last_update": state.get("last_update"),
             "filling_by": state.get("filling_by"),
             "filling_by_name": state.get("filling_by_name"),
