@@ -123,12 +123,16 @@ def update_tank_states():
 
 def main():
     while True:
+        cycle_started = time.monotonic()
         update_tank_states()
         config = load_config()
         interval = float(
-            config.get("system", {}).get("poll_interval_seconds", 10) or 10
+            config.get("system", {}).get("poll_interval_seconds", 5) or 5
         )
-        time.sleep(max(1.0, interval))
+        # Keep a start-to-start cadence. Previously the sensor/network work
+        # was added on top of the configured interval.
+        elapsed = time.monotonic() - cycle_started
+        time.sleep(max(0.1, interval - elapsed))
 
 
 if __name__ == "__main__":

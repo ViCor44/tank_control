@@ -193,7 +193,7 @@ async function fetchTankState() {
 
 formatInitialDates();
 
-setInterval(fetchTankState, 5000);
+setInterval(fetchTankState, 2000);
 setInterval(() => {
   const lastUpdatedIso = document.getElementById("state-last-updated")?.dataset.iso || null;
   updateFreshness(lastUpdatedIso);

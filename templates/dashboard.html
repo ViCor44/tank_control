@@ -266,7 +266,7 @@ async function fetchDashboardState() {
 
 formatInitialDates();
 
-setInterval(fetchDashboardState, 5000);
+setInterval(fetchDashboardState, 2000);
 setInterval(() => {
   const lastUpdatedIso = document.getElementById("state-last-updated")?.dataset.iso || null;
   updateFreshness(lastUpdatedIso);

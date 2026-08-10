@@ -203,7 +203,7 @@ async function fetchSourceState() {
 
 formatInitialDates();
 
-setInterval(fetchSourceState, 5000);
+setInterval(fetchSourceState, 2000);
 setInterval(() => {
   const lastUpdatedIso = document.getElementById("state-last-updated")?.dataset.iso || null;
   updateFreshness(lastUpdatedIso);

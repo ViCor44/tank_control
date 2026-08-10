@@ -964,7 +964,7 @@ def create_app():
             "decision_interval_seconds", system.get("decision_interval_seconds", 5)
         )
         system["poll_interval_seconds"] = _float_or_default(
-            "poll_interval_seconds", system.get("poll_interval_seconds", 10)
+            "poll_interval_seconds", system.get("poll_interval_seconds", 5)
         )
         system["sensor_request_timeout_seconds"] = _float_or_default(
             "sensor_request_timeout_seconds", system.get("sensor_request_timeout_seconds", 2)

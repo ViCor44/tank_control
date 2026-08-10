@@ -22,15 +22,14 @@
         <small style="color: var(--muted); font-weight: normal;">— o poller lê e decide a cada X segundos</small>
       </label>
       <input id="poll_interval_seconds" type="number" step="0.5" min="1" name="poll_interval_seconds"
-             value="{{ system.poll_interval_seconds if system.poll_interval_seconds is not none else 10 }}">
+             value="{{ system.poll_interval_seconds if system.poll_interval_seconds is not none else 5 }}">
     </div>
 
     <div class="form-group">
-      <label for="decision_interval_seconds">Intervalo de decisão (s)
-        <small style="color: var(--muted); font-weight: normal;">— cadência lógica do motor</small>
-      </label>
-      <input id="decision_interval_seconds" type="number" step="0.5" min="1" name="decision_interval_seconds"
-             value="{{ system.decision_interval_seconds if system.decision_interval_seconds is not none else 5 }}">
+      <label>Ciclo de decisão</label>
+      <div style="padding: 12px; color: var(--muted);">
+        Executado imediatamente após cada leitura dos sensores.
+      </div>
     </div>
 
     <div class="form-group">
