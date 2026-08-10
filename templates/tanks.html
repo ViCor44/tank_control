@@ -54,6 +54,10 @@
         <p><strong>Relé vazio:</strong> {{ tank.relays.empty }}</p>
         <p><strong>Relé cheio:</strong> {{ tank.relays.full }}</p>
         <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
+        <p id="tank-error-row-{{ tank.id }}" {% if not tank.last_error %}style="display: none;"{% endif %}>
+          <strong>Erro do sensor:</strong>
+          <span id="tank-error-{{ tank.id }}">{{ tank.last_error or "" }}</span>
+        </p>
         <p><strong>Atualizado:</strong> <span id="tank-last-update-{{ tank.id }}">{{ tank.last_update or "-" }}</span></p>
         <div class="card-actions">
           <a class="action-button" href="{{ url_for('edit_tank', tank_id=tank.id) }}">Editar</a>
@@ -146,6 +150,8 @@ function updateTanksPage(data) {
     const volumeEl = document.getElementById(`tank-volume-${tank.id}`);
     const distanceEl = document.getElementById(`tank-distance-${tank.id}`);
     const sensorOkEl = document.getElementById(`tank-sensor-ok-${tank.id}`);
+    const errorRowEl = document.getElementById(`tank-error-row-${tank.id}`);
+    const errorEl = document.getElementById(`tank-error-${tank.id}`);
     const statusEl = document.getElementById(`tank-status-${tank.id}`);
     const fillEl = document.getElementById(`tank-fill-${tank.id}`);
     const lastUpdateEl = document.getElementById(`tank-last-update-${tank.id}`);
@@ -154,6 +160,8 @@ function updateTanksPage(data) {
     if (volumeEl) volumeEl.textContent = tank.volume_m3 ?? "-";
     if (distanceEl) distanceEl.textContent = tank.distance_cm ?? "-";
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
+    if (errorEl) errorEl.textContent = tank.last_error || "";
+    if (errorRowEl) errorRowEl.style.display = tank.last_error ? "" : "none";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
 

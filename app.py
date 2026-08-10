@@ -38,6 +38,7 @@ def enrich_tanks(tanks, tank_states):
             "volume_liters": volume_liters,
             "volume_m3": volume_m3,
             "sensor_ok": sensor_ok,
+            "last_error": state.get("last_error"),
             "last_update": state.get("last_update"),
             "filling_by": state.get("filling_by"),
             "filling_by_name": state.get("filling_by_name"),
