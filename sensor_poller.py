@@ -1,5 +1,6 @@
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -26,6 +27,32 @@ def save_state(state):
         json.dump(state, f, indent=2, ensure_ascii=False)
 
 
+def read_sensors_parallel(tanks, timeout_seconds):
+    """Read enabled tanks concurrently without sharing mutable state."""
+    enabled_tanks = [tank for tank in tanks if tank.get("enabled", False)]
+    if not enabled_tanks:
+        return {}
+
+    readings = {}
+    with ThreadPoolExecutor(max_workers=len(enabled_tanks), thread_name_prefix="tank-sensor") as executor:
+        futures = {
+            executor.submit(
+                get_tank_sensor_reading,
+                tank,
+                timeout_seconds=timeout_seconds,
+            ): tank["id"]
+            for tank in enabled_tanks
+        }
+        for future in as_completed(futures):
+            tank_id = futures[future]
+            try:
+                readings[tank_id] = future.result()
+            except Exception as exc:
+                readings[tank_id] = {"ok": False, "error": str(exc)}
+
+    return readings
+
+
 def update_tank_states():
     config = load_config()
     state = load_state()
@@ -39,8 +66,13 @@ def update_tank_states():
     system = config.get("system", {})
     spike_threshold_cm = float(system.get("sensor_spike_threshold_cm", 7) or 7)
     spike_max_consecutive = int(system.get("sensor_spike_max_consecutive", 3) or 3)
+    tanks = config.get("tanks", [])
+    readings = read_sensors_parallel(
+        tanks,
+        timeout_seconds=system.get("sensor_request_timeout_seconds", 2),
+    )
 
-    for tank in config.get("tanks", []):
+    for tank in tanks:
         tank_id = tank["id"]
 
         if tank_id not in state["tanks"]:
@@ -54,10 +86,7 @@ def update_tank_states():
             continue
 
         try:
-            reading = get_tank_sensor_reading(
-                tank,
-                timeout_seconds=system.get("sensor_request_timeout_seconds", 2)
-            )
+            reading = readings.get(tank_id, {"ok": False, "error": "missing_sensor_result"})
 
             if reading.get("ok"):
                 tank_state = state["tanks"][tank_id]
