@@ -52,17 +52,17 @@
     },
     {
       "id": "T2",
-      "name": "Tanque 2",
+      "name": "Tanque 2 (Osmose 1)",
       "enabled": true,
-      "capacity_liters": 1000,
+      "capacity_liters": 123000,
       "calibration": {
-        "distance_empty_cm": 150,
-        "distance_full_cm": 20
+        "distance_empty_cm": 270,
+        "distance_full_cm": 48
       },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t2",
-        "endpoint": "http://192.168.1.102/level",
+        "endpoint": "http://192.168.63.142/distance",
         "method": "GET",
         "level_key": "distance_cm"
       },
@@ -73,21 +73,22 @@
       "relays": {
         "empty": 3,
         "full": 4
-      }
+      },
+      "hysteresis_cm": 0.0
     },
     {
       "id": "T3",
-      "name": "Tanque 3",
+      "name": "Tanque 3 (Enchimentos)",
       "enabled": true,
-      "capacity_liters": 1000,
+      "capacity_liters": 470000,
       "calibration": {
-        "distance_empty_cm": 150,
-        "distance_full_cm": 20
+        "distance_empty_cm": 270,
+        "distance_full_cm": 35
       },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t3",
-        "endpoint": "http://192.168.1.103/level",
+        "endpoint": "http://192.168.63.143/distance",
         "method": "GET",
         "level_key": "distance_cm"
       },
@@ -98,21 +99,22 @@
       "relays": {
         "empty": 5,
         "full": 6
-      }
+      },
+      "hysteresis_cm": 0.0
     },
     {
       "id": "T4",
-      "name": "Tanque 4",
+      "name": "Tanque 4 (Rega)",
       "enabled": true,
-      "capacity_liters": 1000,
+      "capacity_liters": 218000,
       "calibration": {
-        "distance_empty_cm": 150,
-        "distance_full_cm": 20
+        "distance_empty_cm": 285,
+        "distance_full_cm": 35
       },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t4",
-        "endpoint": "http://192.168.1.104/level",
+        "endpoint": "http://192.168.63.144/distance",
         "method": "GET",
         "level_key": "distance_cm"
       },
@@ -123,21 +125,22 @@
       "relays": {
         "empty": 7,
         "full": 8
-      }
+      },
+      "hysteresis_cm": 0.0
     },
     {
       "id": "T5",
-      "name": "Tanque 5",
+      "name": "Tanque 5 (Reserva)",
       "enabled": true,
-      "capacity_liters": 1000,
+      "capacity_liters": 570000,
       "calibration": {
-        "distance_empty_cm": 150,
-        "distance_full_cm": 20
+        "distance_empty_cm": 231,
+        "distance_full_cm": 35
       },
       "sensor": {
         "type": "a02yyuw",
         "controller": "esp32_t5",
-        "endpoint": "http://192.168.1.105/level",
+        "endpoint": "http://192.168.63.145/distance",
         "method": "GET",
         "level_key": "distance_cm"
       },
@@ -148,7 +151,8 @@
       "relays": {
         "empty": 9,
         "full": 10
-      }
+      },
+      "hysteresis_cm": 0.0
     }
   ],
   "sources": [
