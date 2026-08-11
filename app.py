@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from services.config_service import load_config, load_state, save_config, save_state
 from services.alarm_service import build_tank_alarms
@@ -455,6 +456,9 @@ def create_app():
         tank_state["sensor_ok"] = False
         tank_state["status"] = "unknown"
         tank_state["last_update"] = datetime.now(timezone.utc).isoformat()
+        # A poll that started before this reset must not restore its stale
+        # distance/error when it finishes.
+        tank_state["sensor_reset_token"] = uuid4().hex
 
         save_state(state)
 

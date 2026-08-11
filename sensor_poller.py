@@ -4,7 +4,11 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
-from services.config_service import load_config, load_state, save_state
+from services.config_service import (
+    load_config,
+    load_state,
+    save_state_preserving_sensor_resets,
+)
 from services.tank_service import (
     apply_sensor_spike_filter,
     calculate_tank_status,
@@ -52,6 +56,10 @@ def read_sensors_parallel(tanks, timeout_seconds):
 def update_tank_states():
     config = load_config()
     state = load_state()
+    loaded_reset_tokens = {
+        tank_id: tank_state.get("sensor_reset_token")
+        for tank_id, tank_state in state.get("tanks", {}).items()
+    }
 
     if "tanks" not in state:
         state["tanks"] = {}
@@ -153,7 +161,7 @@ def update_tank_states():
     state = apply_source_relays(config, state)
     state["alarms"] = build_tank_alarms(config, state)
     state["state_last_updated"] = now_iso()
-    save_state(state)
+    save_state_preserving_sensor_resets(state, loaded_reset_tokens)
 
 
 def poll_forever():
