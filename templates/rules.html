@@ -34,7 +34,11 @@
               {{ 'ativa' if source.enabled else 'inativa' }}
             </span>
             <span class="rules-source-runtime" id="rules-source-runtime-{{ source.id }}">
-              {% if source.active and source.current_tank_name %}
+              {% if source.route_transition %}
+                <span class="badge badge-status-waiting route-transition-badge"
+                      data-phase="{{ source.route_transition.phase }}"
+                      data-deadline="{{ source.route_transition.phase_deadline }}"></span>
+              {% elif source.active and source.current_tank_name %}
                 <span class="badge badge-filling">
                   <span class="pulse-dot"></span>
                   A encher {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
@@ -238,6 +242,8 @@
 
 <script>
 function buildSourceRuntimeBadge(source) {
+  const transition = buildRouteTransitionBadge(source.route_transition);
+  if (transition) return transition;
   if (source.active && source.current_tank_name) {
     let html = `<span class="badge badge-filling"><span class="pulse-dot"></span> A encher ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
     const skipped = source.skipped_offline_tank_names || [];
@@ -269,6 +275,29 @@ function buildSourceRuntimeBadge(source) {
   return "";
 }
 
+function buildRouteTransitionBadge(transition) {
+  if (!transition || !transition.phase) return "";
+  return `<span class="badge badge-status-waiting route-transition-badge" data-phase="${transition.phase}" data-deadline="${transition.phase_deadline || ""}"></span>`;
+}
+
+function updateRouteTransitionCountdowns() {
+  const labels = {
+    stopping: "A parar fonte",
+    closing_old_valve: "A fechar válvula antiga",
+    opening_new_valve: "Válvula nova aberta · arranque em"
+  };
+  document.querySelectorAll(".route-transition-badge").forEach(el => {
+    const deadline = el.dataset.deadline ? new Date(el.dataset.deadline) : null;
+    const remaining = deadline && !isNaN(deadline.getTime())
+      ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 1000))
+      : 0;
+    const label = labels[el.dataset.phase] || "A mudar de tanque";
+    el.textContent = el.dataset.phase === "opening_new_valve"
+      ? `${label} ${remaining}s`
+      : `${label} · ${remaining}s`;
+  });
+}
+
 function buildStepBadge(isCurrent, isTarget, sensorOffline) {
   const parts = [];
   if (isCurrent) {
@@ -292,6 +321,7 @@ function updateRulesRuntime(data) {
     const runtimeEl = document.getElementById(`rules-source-runtime-${source.id}`);
     if (runtimeEl) {
       runtimeEl.innerHTML = buildSourceRuntimeBadge(source);
+      updateRouteTransitionCountdowns();
     }
 
     // Update per-step highlights
@@ -327,5 +357,7 @@ async function fetchRulesState() {
 }
 
 setInterval(fetchRulesState, 2000);
+updateRouteTransitionCountdowns();
+setInterval(updateRouteTransitionCountdowns, 1000);
 </script>
 {% endblock %}

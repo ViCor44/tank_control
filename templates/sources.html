@@ -34,7 +34,11 @@
     </div>
 
     <div class="source-target" id="source-target-{{ source.id }}">
-      {% if source.current_tank_name %}
+      {% if source.route_transition %}
+        <span class="badge badge-status-waiting route-transition-badge"
+              data-phase="{{ source.route_transition.phase }}"
+              data-deadline="{{ source.route_transition.phase_deadline }}"></span>
+      {% elif source.current_tank_name %}
         <span class="badge badge-filling">
           <span class="pulse-dot"></span>
           Alvo: {{ source.current_tank_name }} (relé {{ source.current_route_relay }})
@@ -128,6 +132,29 @@ function updateSourceStatus(element, status) {
   element.textContent = status;
 }
 
+function buildRouteTransitionBadge(transition) {
+  if (!transition || !transition.phase) return "";
+  return `<span class="badge badge-status-waiting route-transition-badge" data-phase="${transition.phase}" data-deadline="${transition.phase_deadline || ""}"></span>`;
+}
+
+function updateRouteTransitionCountdowns() {
+  const labels = {
+    stopping: "A parar fonte",
+    closing_old_valve: "A fechar válvula antiga",
+    opening_new_valve: "Válvula nova aberta · arranque em"
+  };
+  document.querySelectorAll(".route-transition-badge").forEach(el => {
+    const deadline = el.dataset.deadline ? new Date(el.dataset.deadline) : null;
+    const remaining = deadline && !isNaN(deadline.getTime())
+      ? Math.max(0, Math.ceil((deadline.getTime() - Date.now()) / 1000))
+      : 0;
+    const label = labels[el.dataset.phase] || "A mudar de tanque";
+    el.textContent = el.dataset.phase === "opening_new_valve"
+      ? `${label} ${remaining}s`
+      : `${label} · ${remaining}s`;
+  });
+}
+
 function updateSourcesPage(data) {
   const countEl = document.getElementById("source-page-count");
   if (countEl) {
@@ -147,7 +174,9 @@ function updateSourcesPage(data) {
 
     if (targetEl) {
       let html = "";
-      if (source.current_tank_name) {
+      if (source.route_transition) {
+        html = buildRouteTransitionBadge(source.route_transition);
+      } else if (source.current_tank_name) {
         html = `<span class="badge badge-filling"><span class="pulse-dot"></span> Alvo: ${source.current_tank_name} (relé ${source.current_route_relay})</span>`;
       } else if (source.target_reason === "blocked" && source.blocked_by_name) {
         html = `<span class="badge badge-status-low">Bloqueada — tanque servido por ${source.blocked_by_name}</span>`;
@@ -165,6 +194,7 @@ function updateSourcesPage(data) {
         html = `<span class="badge badge-idle">Sem alvo</span>`;
       }
       targetEl.innerHTML = html;
+      updateRouteTransitionCountdowns();
     }
 
     if (lastUpdateEl) {
@@ -204,6 +234,8 @@ async function fetchSourceState() {
 formatInitialDates();
 
 setInterval(fetchSourceState, 2000);
+updateRouteTransitionCountdowns();
+setInterval(updateRouteTransitionCountdowns, 1000);
 setInterval(() => {
   const lastUpdatedIso = document.getElementById("state-last-updated")?.dataset.iso || null;
   updateFreshness(lastUpdatedIso);

@@ -49,6 +49,14 @@ def _tank_by_id(config, tank_id):
     return None
 
 
+def _source_delay(source, key, default):
+    """A zero/missing per-source delay inherits the system default."""
+    value = source.get(key)
+    if value in (None, "", 0, 0.0, "0", "0.0"):
+        return float(default or 0)
+    return float(value)
+
+
 def compute_source_targets(config, state):
     """Decide, per source, which sequence step should be active now.
 
@@ -331,7 +339,9 @@ def apply_source_relays(config, state):
             source_state["last_update"] = now_iso()
             source_state["desired_active_since"] = None
             source_state["physical_route_relay"] = 0
+            source_state["physical_tank_id"] = None
             source_state["pending_valve_close"] = {}
+            source_state["route_transition"] = None
             if enable_relay > 0:
                 relay_results.append(relay_service.relay_off(enable_relay))
             for route in source_routes:
@@ -342,13 +352,92 @@ def apply_source_relays(config, state):
 
         desired_active = bool(source_state.get("desired_active", False))
         current_active = bool(source_state.get("active", False))
-        startup_delay = float(source.get("startup_delay_seconds", default_start_delay) or 0)
-        stop_delay = float(source.get("stop_delay_seconds", default_stop_delay) or 0)
-        valve_overlap = float(source.get("valve_overlap_seconds", default_valve_overlap) or 0)
-        valve_close_delay = float(source.get("valve_close_delay_seconds", default_valve_close_delay) or 0)
+        startup_delay = _source_delay(source, "startup_delay_seconds", default_start_delay)
+        stop_delay = _source_delay(source, "stop_delay_seconds", default_stop_delay)
+        valve_overlap = _source_delay(source, "valve_overlap_seconds", default_valve_overlap)
+        valve_close_delay = _source_delay(
+            source, "valve_close_delay_seconds", default_valve_close_delay
+        )
+
+        requested_route_relay = int(source_state.get("current_route_relay", 0) or 0)
+        requested_tank_id = source_state.get("current_tank_id")
+        prev_physical = int(source_state.get("physical_route_relay", 0) or 0)
+        transition = source_state.get("route_transition")
+
+        if transition and not desired_active:
+            transition = None
+            source_state["route_transition"] = None
+
+        # A route change while pumping is a full stop/valve/start transition.
+        # Keep the requested target separate from the physical route so every
+        # way of selecting a new tank follows exactly the same safety delays.
+        if (
+            desired_active
+            and current_active
+            and prev_physical > 0
+            and requested_route_relay > 0
+            and requested_route_relay != prev_physical
+            and not transition
+        ):
+            transition = {
+                "phase": "stopping",
+                "phase_since": now.isoformat(),
+                "phase_deadline": (now + timedelta(seconds=stop_delay)).isoformat(),
+                "target_route_relay": requested_route_relay,
+                "target_tank_id": requested_tank_id,
+            }
+
+        if transition:
+            # Rules may choose an even more urgent target while the source is
+            # winding down. Updating the destination is safe; the physical
+            # route does not change until the old valve has closed.
+            if desired_active and requested_route_relay > 0:
+                transition["target_route_relay"] = requested_route_relay
+                transition["target_tank_id"] = requested_tank_id
+
+            phase = transition.get("phase", "stopping")
+            phase_since = _parse_iso(transition.get("phase_since")) or now
+            elapsed = (now - phase_since).total_seconds()
+
+            if phase == "stopping" and elapsed >= stop_delay:
+                current_active = False
+                phase = "closing_old_valve"
+                transition["phase"] = phase
+                transition["phase_since"] = now.isoformat()
+                transition["phase_deadline"] = (
+                    now + timedelta(seconds=valve_close_delay)
+                ).isoformat()
+                elapsed = 0
+
+            if phase == "closing_old_valve" and elapsed >= valve_close_delay:
+                phase = "opening_new_valve"
+                transition["phase"] = phase
+                transition["phase_since"] = now.isoformat()
+                transition["phase_deadline"] = (
+                    now + timedelta(seconds=startup_delay)
+                ).isoformat()
+                source_state["physical_route_relay"] = int(
+                    transition.get("target_route_relay", 0) or 0
+                )
+                prev_physical = source_state["physical_route_relay"]
+                elapsed = 0
+
+            if phase == "opening_new_valve" and elapsed >= startup_delay:
+                current_active = True
+                source_state["physical_tank_id"] = transition.get("target_tank_id")
+                source_state["route_transition"] = None
+                transition = None
+            else:
+                source_state["route_transition"] = transition
+
+            # The normal active/inactive delay code must not run in parallel
+            # with a route transition.
+            applied_active = current_active
+        else:
+            source_state["route_transition"] = None
 
         applied_active = current_active
-        if desired_active != current_active:
+        if not transition and desired_active != current_active:
             since_iso = source_state.get("desired_active_since")
             if since_iso:
                 since = _parse_iso(since_iso) or now
@@ -373,6 +462,15 @@ def apply_source_relays(config, state):
             source_state["desired_active_since"] = None
 
         current_route_relay = int(source_state.get("current_route_relay", 0) or 0)
+        transition = source_state.get("route_transition")
+        if transition:
+            phase = transition.get("phase")
+            if phase in ("stopping", "closing_old_valve"):
+                current_route_relay = prev_physical
+            elif phase == "opening_new_valve":
+                current_route_relay = int(
+                    transition.get("target_route_relay", 0) or 0
+                )
 
         # --- Safety-aware valve state machine ---
         #
@@ -434,6 +532,8 @@ def apply_source_relays(config, state):
         # forget the physical valve tracker.
         if not applied_active and not pending_valve_close:
             source_state["physical_route_relay"] = 0
+            if not transition:
+                source_state["physical_tank_id"] = None
 
         source_state["pending_valve_close"] = pending_valve_close
 
@@ -481,6 +581,8 @@ def apply_source_relays(config, state):
 
         # Mark filling target on the tank state (only if we're actually pumping)
         current_tank_id = source_state.get("current_tank_id")
+        if applied_active and transition:
+            current_tank_id = source_state.get("physical_tank_id")
         if applied_active and current_tank_id:
             ts = tank_states.setdefault(current_tank_id, {})
             sources_list = ts.setdefault("filling_by_sources", [])
@@ -493,6 +595,8 @@ def apply_source_relays(config, state):
                 ts["filling_by_name"] = source.get("name", source_id)
 
         source_state["active"] = applied_active
+        if applied_active and not transition:
+            source_state["physical_tank_id"] = current_tank_id
         source_state["last_update"] = now_iso()
 
     state["source_relays"] = relay_results

@@ -109,6 +109,7 @@ def enrich_sources(sources, source_states, tanks=None):
             "blocked_by_name": source_name_by_id.get(blocked_by_id) if blocked_by_id else None,
             "skipped_offline_tank_ids": skipped_ids,
             "skipped_offline_tank_names": skipped_names,
+            "route_transition": state.get("route_transition"),
             "last_update": state.get("last_update")
         })
 
@@ -713,6 +714,7 @@ def create_app():
                 "blocked_by_name": source_blocked_by_name,
                 "current_tank_name": src_state.get("current_tank_name"),
                 "current_route_relay": src_state.get("current_route_relay", 0),
+                "route_transition": src_state.get("route_transition"),
                 "skipped_offline_tank_ids": skipped_offline_ids,
                 "skipped_offline_tank_names": skipped_offline_names,
             })
