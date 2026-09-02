@@ -1,8 +1,10 @@
 import logging
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from pathlib import Path
 
 from services.config_service import (
     load_config,
@@ -22,6 +24,33 @@ from services.alarm_history_service import record_alarm_transitions
 logger = logging.getLogger(__name__)
 _poller_thread = None
 _poller_lock = threading.Lock()
+_poller_process_lock = None
+
+
+def _acquire_process_lock():
+    """Ensure that only one web-server process polls and writes sensor state."""
+    global _poller_process_lock
+    lock_path = Path(__file__).resolve().parent / "config" / "sensor_poller.lock"
+    handle = lock_path.open("a+b")
+    handle.seek(0)
+    if handle.read(1) == b"":
+        handle.write(b"0")
+        handle.flush()
+    handle.seek(0)
+
+    try:
+        if os.name == "nt":
+            import msvcrt
+            msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except (OSError, IOError):
+        handle.close()
+        return False
+
+    _poller_process_lock = handle
+    return True
 
 
 def now_iso():
@@ -192,11 +221,14 @@ def poll_forever():
 
 
 def start_background_poller():
-    """Start exactly one sensor polling thread in this Python process."""
+    """Start one sensor polling thread across all web-server processes."""
     global _poller_thread
     with _poller_lock:
         if _poller_thread is not None and _poller_thread.is_alive():
             return _poller_thread
+        if not _acquire_process_lock():
+            logger.info("Outro processo já está a executar a leitura dos sensores")
+            return None
 
         _poller_thread = threading.Thread(
             target=poll_forever,

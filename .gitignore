@@ -9,4 +9,5 @@ env/
 config/security.json
 config/audit.jsonl
 config/.session_secret
+config/sensor_poller.lock
 config/alarm_history.json

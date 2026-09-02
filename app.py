@@ -457,7 +457,11 @@ def create_app():
 
     @app.route("/security/alarm-history")
     def alarm_history():
-        return render_template("alarm_history.html", entries=load_alarm_history())
+        entries = [
+            {**entry, "error_message": format_sensor_error(entry.get("error"))}
+            for entry in load_alarm_history()
+        ]
+        return render_template("alarm_history.html", entries=entries)
 
     @app.route("/")
     def index():
