@@ -35,10 +35,10 @@ body {
 /* PIN access and header administration */
 .sidebar-footer { margin-top: auto; padding-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .signed-user { color: var(--green); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
-.gear-menu { position: relative; }
+.gear-menu { position: relative; margin-left: auto; }
 .gear-menu summary { list-style: none; cursor: pointer; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-size: 24px; }
 .gear-menu summary::-webkit-details-marker { display: none; }
-.gear-popover { position: absolute; z-index: 20; left: 0; bottom: 54px; width: 180px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #020617; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.gear-popover { position: absolute; z-index: 20; right: 0; bottom: 54px; width: 180px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #020617; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
 .gear-popover a, .gear-popover button { display: block; width: 100%; padding: 11px; color: var(--text); background: none; border: 0; text-align: left; text-decoration: none; font: inherit; cursor: pointer; border-radius: 8px; }
 .gear-popover a:hover, .gear-popover button:hover { background: var(--panel-2); color: var(--blue); }
 .gear-popover form { margin: 0; }
