@@ -593,6 +593,8 @@ def create_app():
             "last_raw_distance_cm",
             "last_spike_delta_cm",
             "consecutive_spike_count",
+            "consecutive_sensor_failures",
+            "last_sensor_failure",
             "last_error",
         ):
             tank_state.pop(key, None)
@@ -601,6 +603,7 @@ def create_app():
         # the fail-safe already in place skips it and no source keeps filling
         # it based on stale data.
         tank_state["sensor_ok"] = False
+        tank_state["sensor_reading_valid"] = False
         tank_state["status"] = "unknown"
         tank_state["last_update"] = datetime.now(timezone.utc).isoformat()
         # A poll that started before this reset must not restore its stale
@@ -1186,6 +1189,14 @@ def create_app():
         except (TypeError, ValueError):
             system["sensor_spike_max_consecutive"] = int(
                 system.get("sensor_spike_max_consecutive", 3) or 3
+            )
+        try:
+            system["sensor_failure_max_consecutive"] = max(
+                1, int(request.form.get("sensor_failure_max_consecutive", ""))
+            )
+        except (TypeError, ValueError):
+            system["sensor_failure_max_consecutive"] = max(
+                1, int(system.get("sensor_failure_max_consecutive", 3) or 3)
             )
         system["safe_mode_on_error"] = request.form.get("safe_mode_on_error") == "on"
 

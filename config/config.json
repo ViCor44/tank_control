@@ -10,7 +10,8 @@
     "default_valve_overlap_seconds": 0,
     "default_valve_close_delay_seconds": 0,
     "sensor_spike_threshold_cm": 7,
-    "sensor_spike_max_consecutive": 3
+    "sensor_spike_max_consecutive": 3,
+    "sensor_failure_max_consecutive": 3
   },
   "relay_boards": [
     {

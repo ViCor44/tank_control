@@ -100,6 +100,9 @@ def update_tank_states():
     system = config.get("system", {})
     spike_threshold_cm = float(system.get("sensor_spike_threshold_cm", 7) or 7)
     spike_max_consecutive = int(system.get("sensor_spike_max_consecutive", 3) or 3)
+    failure_max_consecutive = max(
+        1, int(system.get("sensor_failure_max_consecutive", 3) or 3)
+    )
     tanks = config.get("tanks", [])
     readings = read_sensors_parallel(
         tanks,
@@ -117,6 +120,7 @@ def update_tank_states():
             state["tanks"][tank_id]["sensor_reading_valid"] = False
             state["tanks"][tank_id]["status"] = "disabled"
             state["tanks"][tank_id]["consecutive_spike_count"] = 0
+            state["tanks"][tank_id]["consecutive_sensor_failures"] = 0
             state["tanks"][tank_id]["last_update"] = now_iso()
             continue
 
@@ -175,11 +179,35 @@ def update_tank_states():
                     tank_state["status"] = "unknown"
                     tank_state["last_error"] = "sensor_spike_persistent"
                     tank_state["last_update"] = now_iso()
+
+                # Any valid HTTP response proves that communication recovered,
+                # even when the distance itself is rejected by the spike filter.
+                tank_state["consecutive_sensor_failures"] = 0
+                tank_state.pop("last_sensor_failure", None)
+                if filter_result["status"] != "persistent":
+                    tank_state.pop("last_error", None)
             else:
-                state["tanks"][tank_id]["sensor_ok"] = False
-                state["tanks"][tank_id]["sensor_reading_valid"] = False
-                state["tanks"][tank_id]["last_error"] = reading.get("error", "unknown_error")
-                state["tanks"][tank_id]["last_update"] = now_iso()
+                tank_state = state["tanks"][tank_id]
+                failure_count = int(
+                    tank_state.get("consecutive_sensor_failures", 0) or 0
+                ) + 1
+                error = reading.get("error", "unknown_error")
+                tank_state["consecutive_sensor_failures"] = failure_count
+                tank_state["last_sensor_failure"] = error
+
+                # Keep the last trustworthy reading through brief network
+                # interruptions. Only a persistent failure is allowed to stop
+                # control and raise the offline alarm.
+                has_valid_reading = (
+                    tank_state.get("sensor_ok", False)
+                    and tank_state.get("sensor_reading_valid", False)
+                    and tank_state.get("distance_cm") is not None
+                )
+                if failure_count >= failure_max_consecutive or not has_valid_reading:
+                    tank_state["sensor_ok"] = False
+                    tank_state["sensor_reading_valid"] = False
+                    tank_state["last_error"] = error
+                    tank_state["last_update"] = now_iso()
 
         except Exception as e:
             state["tanks"][tank_id]["sensor_ok"] = False

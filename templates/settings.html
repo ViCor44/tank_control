@@ -96,6 +96,15 @@
              value="{{ system.sensor_spike_max_consecutive if system.sensor_spike_max_consecutive is not none else 3 }}">
     </div>
 
+    <div class="form-group">
+      <label for="sensor_failure_max_consecutive">Falhas de comunicação consecutivas antes do safe mode
+        <small style="color: var(--muted); font-weight: normal;">— mantém a última leitura válida durante falhas breves; recomendado: 3</small>
+      </label>
+      <input id="sensor_failure_max_consecutive" type="number" step="1" min="1"
+             name="sensor_failure_max_consecutive"
+             value="{{ system.sensor_failure_max_consecutive if system.sensor_failure_max_consecutive is not none else 3 }}">
+    </div>
+
     <div class="form-group checkbox-group form-group-full">
       <label>
         <input type="checkbox" name="safe_mode_on_error" {% if system.safe_mode_on_error %}checked{% endif %}>
