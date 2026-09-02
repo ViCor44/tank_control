@@ -2,8 +2,8 @@
 {% block title %}Histórico de erros e alarmes{% endblock %}
 {% block content %}
 <div class="page-header"><div><h2>Erros e alarmes</h2><p class="muted">Últimos 500 eventos, incluindo resolução</p></div><a class="button secondary" href="{{ url_for('security_history') }}">Acessos e ações</a></div>
-<section class="panel"><div class="table-wrap"><table>
+<section class="panel alarm-history-panel"><div class="table-wrap"><table class="alarm-history-table">
   <thead><tr><th>Data/hora (UTC)</th><th>Estado</th><th>Gravidade</th><th>Tanque</th><th>Mensagem</th><th>Erro técnico</th></tr></thead>
-  <tbody>{% for entry in entries %}<tr><td>{{ entry.timestamp[:19].replace('T', ' ') }}</td><td><span class="badge alarm-event-{{ entry.event }}">{{ 'Ativado' if entry.event == 'activated' else 'Resolvido' }}</span></td><td><span class="badge alarm-{{ entry.severity }}">{{ entry.severity|upper }}</span></td><td>{{ entry.tank_id or '—' }}</td><td>{{ entry.message }}</td><td>{{ entry.error or '—' }}</td></tr>{% else %}<tr><td colspan="6">Ainda não existem eventos registados.</td></tr>{% endfor %}</tbody>
+  <tbody>{% for entry in entries %}<tr><td>{{ entry.timestamp[:19].replace('T', ' ') }}</td><td><span class="badge alarm-event-{{ entry.event }}">{{ 'Ativado' if entry.event == 'activated' else 'Resolvido' }}</span></td><td><span class="badge alarm-{{ entry.severity }}">{{ entry.severity|upper }}</span></td><td>{{ entry.tank_id or '—' }}</td><td>{{ entry.message }}</td><td class="alarm-technical-error">{{ entry.error or '—' }}</td></tr>{% else %}<tr><td colspan="6">Ainda não existem eventos registados.</td></tr>{% endfor %}</tbody>
 </table></div></section>
 {% endblock %}
