@@ -102,5 +102,123 @@
     }, true);
   })();
   </script>
+  <div id="virtual-keyboard" class="virtual-keyboard" hidden aria-label="Teclado virtual">
+    <div class="keyboard-toolbar"><span id="keyboard-label">Teclado</span><button type="button" data-keyboard-close>Fechar</button></div>
+    <div id="keyboard-keys" class="keyboard-keys"></div>
+  </div>
+  <script>
+  (() => {
+    const keyboard = document.getElementById("virtual-keyboard");
+    const keysElement = document.getElementById("keyboard-keys");
+    const label = document.getElementById("keyboard-label");
+    let activeInput = null;
+    let uppercase = false;
+
+    const textRows = ["1234567890", "qwertyuiop", "asdfghjklç", "zxcvbnm", "áàâãéêíóôõú"];
+    const numericKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
+    function eligible(element) {
+      if (!element || element.disabled || element.readOnly) return false;
+      if (element.tagName === "TEXTAREA") return true;
+      if (element.tagName !== "INPUT") return false;
+      return !["hidden", "checkbox", "radio", "submit", "button", "reset", "file", "range", "color"].includes(element.type);
+    }
+
+    function isNumeric(element) {
+      return element.type === "number" || element.type === "password" || element.dataset.keyboard === "numeric" || element.dataset.originalInputmode === "numeric" || element.dataset.originalInputmode === "decimal";
+    }
+
+    function keyButton(value, caption=value, extraClass="") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `keyboard-key ${extraClass}`;
+      button.dataset.key = value;
+      button.textContent = caption;
+      return button;
+    }
+
+    function render() {
+      keysElement.replaceChildren();
+      const numeric = isNumeric(activeInput);
+      label.textContent = numeric ? "Teclado numérico" : "Teclado";
+      if (numeric) {
+        numericKeys.forEach(key => keysElement.appendChild(keyButton(key)));
+        if (activeInput.type === "number") keysElement.appendChild(keyButton(",", ","));
+      } else {
+        textRows.forEach((row, index) => {
+          [...row].forEach(key => keysElement.appendChild(keyButton(key, uppercase ? key.toUpperCase() : key)));
+          if (index < textRows.length - 1) keysElement.appendChild(document.createElement("span")).style.flexBasis = "100%";
+        });
+        keysElement.appendChild(keyButton("shift", uppercase ? "⇩ min" : "⇧ MAI", "keyboard-key-wide"));
+        keysElement.appendChild(keyButton(" ", "Espaço", "keyboard-key-space"));
+        if (activeInput.tagName === "TEXTAREA") keysElement.appendChild(keyButton("\n", "Enter", "keyboard-key-wide"));
+      }
+      keysElement.appendChild(keyButton("backspace", "⌫", "keyboard-key-wide"));
+      keysElement.appendChild(keyButton("clear", "Limpar", "keyboard-key-wide"));
+      keysElement.appendChild(keyButton("done", "Concluir", "keyboard-key-wide"));
+    }
+
+    function open(element) {
+      activeInput = element;
+      uppercase = false;
+      keyboard.hidden = false;
+      document.body.classList.add("keyboard-open");
+      render();
+      window.setTimeout(() => element.scrollIntoView({behavior: "smooth", block: "center"}), 50);
+    }
+
+    function close() {
+      keyboard.hidden = true;
+      document.body.classList.remove("keyboard-open");
+      if (activeInput) activeInput.dispatchEvent(new Event("change", {bubbles: true}));
+      activeInput = null;
+    }
+
+    function insert(value) {
+      if (!activeInput) return;
+      if (activeInput.type === "number") {
+        const normalized = value === "," ? "." : value;
+        activeInput.value += normalized;
+        activeInput.dispatchEvent(new Event("input", {bubbles: true}));
+        return;
+      }
+      const start = activeInput.selectionStart ?? activeInput.value.length;
+      const end = activeInput.selectionEnd ?? activeInput.value.length;
+      let inserted = uppercase && /[a-záàâãéêíóôõúç]/.test(value) ? value.toUpperCase() : value;
+      activeInput.setRangeText(inserted, start, end, "end");
+      activeInput.dispatchEvent(new Event("input", {bubbles: true}));
+      activeInput.focus({preventScroll: true});
+    }
+
+    document.querySelectorAll("input, textarea").forEach(element => {
+      if (!eligible(element)) return;
+      element.dataset.originalInputmode = element.getAttribute("inputmode") || "";
+      element.setAttribute("inputmode", "none");
+    });
+    document.addEventListener("focusin", event => { if (eligible(event.target)) open(event.target); });
+    keysElement.addEventListener("pointerdown", event => event.preventDefault());
+    keysElement.addEventListener("click", event => {
+      const key = event.target.closest("[data-key]")?.dataset.key;
+      if (!key || !activeInput) return;
+      if (key === "done") return close();
+      if (key === "clear") { activeInput.value = ""; activeInput.dispatchEvent(new Event("input", {bubbles: true})); return; }
+      if (key === "shift") { uppercase = !uppercase; render(); return; }
+      if (key === "backspace") {
+        if (activeInput.type === "number") {
+          activeInput.value = activeInput.value.slice(0, -1);
+          activeInput.dispatchEvent(new Event("input", {bubbles: true}));
+          return;
+        }
+        const start = activeInput.selectionStart ?? activeInput.value.length;
+        const end = activeInput.selectionEnd ?? activeInput.value.length;
+        activeInput.setRangeText("", start === end ? Math.max(0, start - 1) : start, end, "end");
+        activeInput.dispatchEvent(new Event("input", {bubbles: true}));
+        return;
+      }
+      insert(key);
+    });
+    document.querySelector("[data-keyboard-close]").addEventListener("click", close);
+  })();
+  </script>
 </body>
 </html>
