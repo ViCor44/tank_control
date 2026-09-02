@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}tank_control{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260902-pin-no-popup') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260902-keyboard-compact') }}">
 </head>
 <body>
   <aside class="sidebar">
@@ -113,8 +113,10 @@
     const label = document.getElementById("keyboard-label");
     let activeInput = null;
     let uppercase = false;
+    let accentMode = false;
 
-    const textRows = ["1234567890", "qwertyuiop", "asdfghjklç", "zxcvbnm", "áàâãéêíóôõú"];
+    const textRows = ["1234567890", "qwertyuiop", "asdfghjklç", "zxcvbnm"];
+    const accentRows = ["áàâãäéèêëí", "ìîïóòôõöúù", "ûüç"];
     const numericKeys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
     function eligible(element) {
@@ -144,23 +146,40 @@
       if (numeric) {
         numericKeys.forEach(key => keysElement.appendChild(keyButton(key)));
         if (activeInput.type === "number") keysElement.appendChild(keyButton(",", ","));
+        const numericBreak = document.createElement("span");
+        numericBreak.className = "keyboard-row-break";
+        keysElement.appendChild(numericBreak);
       } else {
-        textRows.forEach((row, index) => {
+        const rows = accentMode ? accentRows : textRows;
+        rows.forEach((row, index) => {
           [...row].forEach(key => keysElement.appendChild(keyButton(key, uppercase ? key.toUpperCase() : key)));
-          if (index < textRows.length - 1) keysElement.appendChild(document.createElement("span")).style.flexBasis = "100%";
+          if (index < rows.length - 1) {
+            const rowBreak = document.createElement("span");
+            rowBreak.className = "keyboard-row-break";
+            keysElement.appendChild(rowBreak);
+          }
         });
+        const controlBreak = document.createElement("span");
+        controlBreak.className = "keyboard-row-break";
+        keysElement.appendChild(controlBreak);
         keysElement.appendChild(keyButton("shift", uppercase ? "⇩ min" : "⇧ MAI", "keyboard-key-wide"));
+        keysElement.appendChild(keyButton("accents", accentMode ? "ABC" : "ÁÇ", "keyboard-key-wide"));
         keysElement.appendChild(keyButton(" ", "Espaço", "keyboard-key-space"));
         if (activeInput.tagName === "TEXTAREA") keysElement.appendChild(keyButton("\n", "Enter", "keyboard-key-wide"));
       }
       keysElement.appendChild(keyButton("backspace", "⌫", "keyboard-key-wide"));
       keysElement.appendChild(keyButton("clear", "Limpar", "keyboard-key-wide"));
       keysElement.appendChild(keyButton("done", "Concluir", "keyboard-key-wide"));
+      requestAnimationFrame(() => {
+        document.body.style.setProperty("--keyboard-height", `${keyboard.offsetHeight + 18}px`);
+        if (activeInput) activeInput.scrollIntoView({behavior: "smooth", block: "center"});
+      });
     }
 
     function open(element) {
       activeInput = element;
       uppercase = false;
+      accentMode = false;
       keyboard.hidden = false;
       document.body.classList.add("keyboard-open");
       render();
@@ -203,6 +222,7 @@
       if (key === "done") return close();
       if (key === "clear") { activeInput.value = ""; activeInput.dispatchEvent(new Event("input", {bubbles: true})); return; }
       if (key === "shift") { uppercase = !uppercase; render(); return; }
+      if (key === "accents") { accentMode = !accentMode; render(); return; }
       if (key === "backspace") {
         if (activeInput.type === "number") {
           activeInput.value = activeInput.value.slice(0, -1);
