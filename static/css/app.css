@@ -50,6 +50,7 @@ body {
 .pin-form { display: grid; width: 100%; min-width: 0; gap: 14px; margin-top: 22px; }
 .pin-form input, .pin-form button { display: block; width: 100%; min-width: 0; max-width: 100%; }
 .pin-form input { text-align: center; font-size: 30px; letter-spacing: 10px; }
+.masked-pin { -webkit-text-security: disc; }
 .pin-form input, .form-grid label input, .user-actions input { background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .form-grid label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); }
 .button { display: inline-block; background: rgba(56,189,248,.18); color: #7dd3fc; border: 1px solid rgba(56,189,248,.45); padding: 10px 14px; border-radius: 10px; text-decoration: none; font-weight: bold; cursor: pointer; }

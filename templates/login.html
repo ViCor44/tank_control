@@ -5,6 +5,6 @@
   <div class="auth-icon">{{ '⚙' if master else '🔒' }}</div><h2>{{ 'Administração' if master else 'Área protegida' }}</h2>
   <p>{{ 'Introduza o PIN master.' if master else 'Introduza o seu PIN pessoal para continuar.' }}</p>
   {% for category, message in get_flashed_messages(with_categories=true) %}<div class="flash flash-{{ category }}">{{ message }}</div>{% endfor %}
-  <form method="post" class="pin-form" autocomplete="off"><input type="hidden" name="next" value="{{ next }}"><input name="pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" placeholder="••••" aria-label="PIN" required autofocus><button class="button" type="submit">Entrar</button></form>
+  <form method="post" class="pin-form" autocomplete="off"><input type="hidden" name="next" value="{{ next }}"><input name="pin" type="text" class="masked-pin" data-keyboard="numeric" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" placeholder="PIN" aria-label="PIN" autocomplete="off" autocorrect="off" spellcheck="false" required autofocus><button class="button" type="submit">Entrar</button></form>
 </section></div>
 {% endblock %}
