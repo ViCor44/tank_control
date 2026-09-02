@@ -321,8 +321,8 @@ def create_app():
     app.secret_key = get_session_secret()
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 
-    public_endpoints = {"index", "api_state", "login", "master_login", "static"}
-    master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history", "alarm_history"}
+    public_endpoints = {"index", "api_state", "login", "master_login", "alarm_history", "static"}
+    master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history"}
 
     @app.before_request
     def require_pin():
