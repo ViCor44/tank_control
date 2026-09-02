@@ -43,11 +43,12 @@ body {
 .gear-popover a:hover, .gear-popover button:hover { background: var(--panel-2); color: var(--blue); }
 .gear-popover form { margin: 0; }
 .auth-shell { flex: 1; display: grid; place-items: center; }
-.auth-card { width: min(420px, 100%); text-align: center; padding: 32px; }
+.auth-card { width: min(420px, 100%); min-width: 0; overflow: hidden; text-align: center; padding: 32px; }
 .auth-icon { font-size: 42px; }
 .auth-card h2 { margin-bottom: 8px; }
 .auth-card p, .muted { color: var(--muted); }
-.pin-form { display: grid; gap: 14px; margin-top: 22px; }
+.pin-form { display: grid; width: 100%; min-width: 0; gap: 14px; margin-top: 22px; }
+.pin-form input, .pin-form button { display: block; width: 100%; min-width: 0; max-width: 100%; }
 .pin-form input { text-align: center; font-size: 30px; letter-spacing: 10px; }
 .pin-form input, .form-grid label input, .user-actions input { background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .form-grid label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); }
