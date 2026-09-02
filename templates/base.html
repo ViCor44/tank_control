@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}tank_control{% endblock %}</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260810-source-safety') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css', v='20260902-security') }}">
 </head>
 <body>
   <aside class="sidebar">
@@ -18,12 +18,16 @@
 
     <nav class="nav">
       <a href="/">Dashboard</a>
-      <a href="/tanks">Tanques</a>
-      <a href="/sources">Fontes</a>
-      <a href="/routes">Rotas</a>
-      <a href="/rules">Regras</a>
-      <a href="/settings">Configuração</a>
+      <a href="/tanks">Tanques {{ '' if current_user_name else '🔒' }}</a>
+      <a href="/sources">Fontes {{ '' if current_user_name else '🔒' }}</a>
+      <a href="/routes">Rotas {{ '' if current_user_name else '🔒' }}</a>
+      <a href="/rules">Regras {{ '' if current_user_name else '🔒' }}</a>
+      <a href="/settings">Configuração {{ '' if current_user_name else '🔒' }}</a>
     </nav>
+    <div class="sidebar-footer">
+      {% if current_user_name %}<span class="signed-user">● {{ current_user_name }}</span>{% endif %}
+      <details class="gear-menu"><summary aria-label="Administração">⚙</summary><div class="gear-popover"><a href="{{ url_for('security_users') }}">Utilizadores</a><a href="{{ url_for('security_history') }}">Histórico</a>{% if current_user_name or master_authenticated %}<form method="post" action="{{ url_for('logout') }}"><button type="submit">Terminar sessão</button></form>{% endif %}</div></details>
+    </div>
   </aside>
 
   <main class="content">

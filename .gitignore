@@ -6,3 +6,6 @@ env/
 *.log
 .env
 .DS_Store
+config/security.json
+config/audit.jsonl
+config/.session_secret

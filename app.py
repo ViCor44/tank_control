@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, g
 
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -13,6 +13,7 @@ from services.relay_inventory import (
     get_relay_count,
     get_relay_assignments,
 )
+from services.security_service import append_audit, find_active_user, find_user_by_pin, get_session_secret, hash_pin, load_audit, load_security, pin_in_use, save_security, verify_master_pin
 
 
 def format_sensor_error(error):
@@ -316,6 +317,142 @@ def _recompute_start_relays(boards):
 
 def create_app():
     app = Flask(__name__)
+    app.secret_key = get_session_secret()
+    app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
+
+    public_endpoints = {"index", "api_state", "login", "master_login", "static"}
+    master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history"}
+
+    @app.before_request
+    def require_pin():
+        endpoint = request.endpoint
+        if endpoint is None or endpoint in public_endpoints or endpoint == "logout":
+            return None
+        if endpoint in master_endpoints:
+            if session.get("master_authenticated"):
+                return None
+            return redirect(url_for("master_login", next=request.full_path.rstrip("?")))
+        if session.get("user_id"):
+            user = find_active_user(session["user_id"])
+            if user:
+                session["user_name"] = user["name"]
+                return None
+            session.pop("user_id", None)
+            session.pop("user_name", None)
+        return redirect(url_for("login", next=request.full_path.rstrip("?")))
+
+    @app.before_request
+    def prepare_audit():
+        g.audit_actor = session.get("user_name") or ("Master" if session.get("master_authenticated") else None)
+
+    @app.after_request
+    def audit_request(response):
+        if response.status_code < 400 and g.get("audit_actor") and request.endpoint:
+            page_access = request.method == "GET" and request.endpoint not in {"api_state", "static"}
+            action_request = request.method in {"POST", "PUT", "PATCH", "DELETE"}
+            if page_access or action_request:
+                append_audit(g.audit_actor, "alterou" if action_request else "acedeu", request.path, request.form.get("action", "") if action_request else "", request.remote_addr or "")
+        return response
+
+    @app.context_processor
+    def security_context():
+        return {"current_user_name": session.get("user_name"), "master_authenticated": bool(session.get("master_authenticated"))}
+
+    def _safe_next(default_endpoint="index"):
+        target = request.form.get("next") or request.args.get("next") or ""
+        return target if target.startswith("/") and not target.startswith("//") else url_for(default_endpoint)
+
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if request.method == "POST":
+            user = find_user_by_pin(request.form.get("pin", "").strip())
+            if user:
+                session["user_id"], session["user_name"] = user["id"], user["name"]
+                append_audit(user["name"], "iniciou sessão", _safe_next(), ip=request.remote_addr or "")
+                return redirect(_safe_next())
+            append_audit("PIN desconhecido", "falhou autenticação", _safe_next(), ip=request.remote_addr or "")
+            flash("PIN inválido.", "error")
+        return render_template("login.html", master=False, next=_safe_next())
+
+    @app.route("/master-login", methods=["GET", "POST"])
+    def master_login():
+        if request.method == "POST":
+            if verify_master_pin(request.form.get("pin", "").strip()):
+                session["master_authenticated"] = True
+                append_audit("Master", "autenticou", "Administração", ip=request.remote_addr or "")
+                return redirect(_safe_next("security_users"))
+            append_audit("Desconhecido", "falhou autenticação master", "Administração", ip=request.remote_addr or "")
+            flash("PIN master inválido.", "error")
+        return render_template("login.html", master=True, next=_safe_next("security_users"))
+
+    @app.route("/logout", methods=["POST"])
+    def logout():
+        actor = session.get("user_name") or ("Master" if session.get("master_authenticated") else "Desconhecido")
+        append_audit(actor, "terminou sessão", request.path, ip=request.remote_addr or "")
+        session.clear()
+        return redirect(url_for("index"))
+
+    @app.route("/security/users")
+    def security_users():
+        security = load_security()
+        users = [{k: v for k, v in user.items() if k != "pin_hash"} for user in security.get("users", [])]
+        return render_template("security_users.html", users=users, default_master=security.get("master_pin_is_default", False))
+
+    @app.route("/security/users/add", methods=["POST"])
+    def security_user_add():
+        name, pin = request.form.get("name", "").strip(), request.form.get("pin", "").strip()
+        if not name or not pin.isdigit() or not 4 <= len(pin) <= 8:
+            flash("Indique um nome e um PIN numérico com 4 a 8 dígitos.", "error")
+        elif pin_in_use(pin):
+            flash("Esse PIN já está em utilização.", "error")
+        else:
+            security = load_security()
+            security.setdefault("users", []).append({"id": uuid4().hex, "name": name, "pin_hash": hash_pin(pin), "active": True})
+            save_security(security)
+            append_audit("Master", "criou utilizador", name, ip=request.remote_addr or "")
+            flash("Utilizador criado.", "success")
+        return redirect(url_for("security_users"))
+
+    @app.route("/security/users/<user_id>", methods=["POST"])
+    def security_user_update(user_id):
+        security = load_security()
+        user = next((item for item in security.get("users", []) if item.get("id") == user_id), None)
+        if not user:
+            return "Utilizador não encontrado", 404
+        action = request.form.get("action")
+        if action == "delete":
+            security["users"].remove(user); detail = f"removeu {user['name']}"
+        elif action == "toggle":
+            user["active"] = not user.get("active", True); detail = f"{'ativou' if user['active'] else 'desativou'} {user['name']}"
+        elif action == "pin":
+            pin = request.form.get("pin", "").strip()
+            if not pin.isdigit() or not 4 <= len(pin) <= 8 or pin_in_use(pin, user_id):
+                flash("O novo PIN deve ter 4 a 8 dígitos e não pode estar em uso.", "error")
+                return redirect(url_for("security_users"))
+            user["pin_hash"] = hash_pin(pin); detail = f"alterou o PIN de {user['name']}"
+        else:
+            return "Ação desconhecida", 400
+        save_security(security)
+        append_audit("Master", "geriu utilizador", detail, ip=request.remote_addr or "")
+        flash("Alteração guardada.", "success")
+        return redirect(url_for("security_users"))
+
+    @app.route("/security/master-pin", methods=["POST"])
+    def security_master_pin():
+        new_pin, confirmation = request.form.get("pin", "").strip(), request.form.get("pin_confirmation", "").strip()
+        if new_pin != confirmation or not new_pin.isdigit() or not 4 <= len(new_pin) <= 8 or pin_in_use(new_pin):
+            flash("Os PINs devem coincidir, ter 4 a 8 dígitos e não estar em uso.", "error")
+        else:
+            security = load_security()
+            security.update(master_pin_hash=hash_pin(new_pin), master_pin_is_default=False)
+            save_security(security)
+            append_audit("Master", "alterou", "PIN master", ip=request.remote_addr or "")
+            flash("PIN master alterado.", "success")
+        return redirect(url_for("security_users"))
+
+    @app.route("/security/history")
+    def security_history():
+        return render_template("security_history.html", entries=load_audit())
 
     @app.route("/")
     def index():

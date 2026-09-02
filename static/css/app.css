@@ -32,6 +32,44 @@ body {
   user-select: none;
 }
 
+/* PIN access and header administration */
+.sidebar-footer { margin-top: auto; padding-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.signed-user { color: var(--green); font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+.gear-menu { position: relative; }
+.gear-menu summary { list-style: none; cursor: pointer; width: 46px; height: 46px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-size: 24px; }
+.gear-menu summary::-webkit-details-marker { display: none; }
+.gear-popover { position: absolute; z-index: 20; left: 0; bottom: 54px; width: 180px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; background: #020617; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+.gear-popover a, .gear-popover button { display: block; width: 100%; padding: 11px; color: var(--text); background: none; border: 0; text-align: left; text-decoration: none; font: inherit; cursor: pointer; border-radius: 8px; }
+.gear-popover a:hover, .gear-popover button:hover { background: var(--panel-2); color: var(--blue); }
+.gear-popover form { margin: 0; }
+.auth-shell { flex: 1; display: grid; place-items: center; }
+.auth-card { width: min(420px, 100%); text-align: center; padding: 32px; }
+.auth-icon { font-size: 42px; }
+.auth-card h2 { margin-bottom: 8px; }
+.auth-card p, .muted { color: var(--muted); }
+.pin-form { display: grid; gap: 14px; margin-top: 22px; }
+.pin-form input { text-align: center; font-size: 30px; letter-spacing: 10px; }
+.pin-form input, .form-grid label input, .user-actions input { background: #0b1220; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.form-grid label { display: flex; flex-direction: column; gap: 8px; color: var(--muted); }
+.button { display: inline-block; background: rgba(56,189,248,.18); color: #7dd3fc; border: 1px solid rgba(56,189,248,.45); padding: 10px 14px; border-radius: 10px; text-decoration: none; font-weight: bold; cursor: pointer; }
+.button.secondary { background: rgba(148,163,184,.12); color: #cbd5e1; border-color: rgba(148,163,184,.3); }
+.button.danger { background: rgba(239,68,68,.16); color: #fca5a5; border-color: rgba(239,68,68,.5); }
+.flash { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.flash-error { border-color: var(--red); color: #fecaca; }
+.flash-success { border-color: var(--green); color: #bbf7d0; }
+.security-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.users-panel { min-height: 0; overflow-y: auto; }
+.user-list { display: grid; gap: 10px; }
+.user-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+.user-row > div:first-child { display: flex; align-items: center; gap: 10px; }
+.user-actions, .user-actions form { display: flex; align-items: center; gap: 8px; margin: 0; }
+.user-actions input { width: 120px; }
+.security-grid + .users-panel { flex: 1 1 auto; }
+.panel table { width: 100%; border-collapse: collapse; }
+.panel table th, .panel table td { padding: 11px; border-bottom: 1px solid var(--line); text-align: left; }
+.panel table th { color: var(--muted); }
+@media (max-width: 900px) { .security-grid { grid-template-columns: 1fr; } .user-row, .user-actions { align-items: stretch; flex-direction: column; } }
+
 input,
 textarea,
 select {
@@ -99,6 +137,8 @@ select {
   height: 100vh;
   overflow-y: auto;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
