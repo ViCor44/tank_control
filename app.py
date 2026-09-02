@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from services.config_service import load_config, load_state, save_config, save_state
 from services.alarm_service import build_tank_alarms
+from services.alarm_history_service import load_alarm_history
 from sensor_poller import start_background_poller
 from services.relay_inventory import (
     get_available_relay_options,
@@ -321,7 +322,7 @@ def create_app():
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 
     public_endpoints = {"index", "api_state", "login", "master_login", "static"}
-    master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history"}
+    master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history", "alarm_history"}
 
     @app.before_request
     def require_pin():
@@ -453,6 +454,10 @@ def create_app():
     @app.route("/security/history")
     def security_history():
         return render_template("security_history.html", entries=load_audit())
+
+    @app.route("/security/alarm-history")
+    def alarm_history():
+        return render_template("alarm_history.html", entries=load_alarm_history())
 
     @app.route("/")
     def index():
