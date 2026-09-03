@@ -90,6 +90,7 @@
           <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
           <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
           <p><strong>Atualizado:</strong> <span id="tank-last-update-{{ tank.id }}">{{ tank.last_update or "-" }}</span></p>
+          <button type="button" class="action-button history-button" data-tank-id="{{ tank.id }}" data-tank-name="{{ tank.name }}">Gráfico 48h</button>
         </div>
       </div>
     </div>
@@ -97,7 +98,82 @@
   </div>
 </div>
 
+<div class="history-modal" id="history-modal" hidden>
+  <div class="history-modal-backdrop" data-history-close></div>
+  <section class="history-dialog panel" role="dialog" aria-modal="true" aria-labelledby="history-title">
+    <div class="history-header">
+      <div><h3 id="history-title">Histórico de volume</h3><p id="history-subtitle">Últimas 48 horas</p></div>
+      <button type="button" class="history-close" data-history-close aria-label="Fechar">×</button>
+    </div>
+    <div class="history-chart-wrap"><canvas id="history-chart" aria-label="Gráfico do volume nas últimas 48 horas"></canvas></div>
+    <div class="history-legend"><span><i></i> Volume (m³)</span><strong id="history-summary"></strong></div>
+    <p class="history-empty" id="history-empty" hidden>Ainda não existem leituras suficientes para este período.</p>
+  </section>
+</div>
+
 <script>
+const historyModal = document.getElementById("history-modal");
+const historyCanvas = document.getElementById("history-chart");
+const historyEmpty = document.getElementById("history-empty");
+const historySummary = document.getElementById("history-summary");
+let currentHistory = null;
+
+function drawHistoryChart(samples, capacity) {
+  const ratio = window.devicePixelRatio || 1;
+  const rect = historyCanvas.getBoundingClientRect();
+  historyCanvas.width = Math.max(300, Math.round(rect.width * ratio));
+  historyCanvas.height = Math.max(220, Math.round(rect.height * ratio));
+  const ctx = historyCanvas.getContext("2d");
+  ctx.scale(ratio, ratio);
+  const width = historyCanvas.width / ratio, height = historyCanvas.height / ratio;
+  const pad = {left: 58, right: 18, top: 18, bottom: 38};
+  const plotW = width - pad.left - pad.right, plotH = height - pad.top - pad.bottom;
+  ctx.clearRect(0, 0, width, height);
+  ctx.font = "12px system-ui"; ctx.lineWidth = 1;
+  const end = Date.now(), start = end - 48 * 3600 * 1000;
+  const maxValue = Math.max(capacity || 0, ...samples.map(item => Number(item.volume_m3) || 0), 1);
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + plotH * i / 4;
+    ctx.strokeStyle = "rgba(148, 170, 195, .22)"; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width-pad.right, y); ctx.stroke();
+    ctx.fillStyle = "#a9bacd"; ctx.textAlign = "right"; ctx.fillText(`${Math.round(maxValue*(4-i)/4)} m³`, pad.left-8, y+4);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const x = pad.left + plotW * i / 4, when = new Date(start + (end-start)*i/4);
+    ctx.fillStyle = "#a9bacd"; ctx.textAlign = i === 0 ? "left" : i === 4 ? "right" : "center";
+    ctx.fillText(when.toLocaleDateString("pt-PT", {day:"2-digit",month:"2-digit"}) + " " + when.toLocaleTimeString("pt-PT", {hour:"2-digit",minute:"2-digit"}), x, height-12);
+  }
+  const points = samples.map(item => ({x: pad.left + (new Date(item.timestamp).getTime()-start)/(end-start)*plotW, y: pad.top + plotH-(Number(item.volume_m3)/maxValue)*plotH})).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
+  if (!points.length) return;
+  const gradient = ctx.createLinearGradient(0,pad.top,0,pad.top+plotH); gradient.addColorStop(0,"rgba(42,167,255,.42)"); gradient.addColorStop(1,"rgba(42,167,255,.03)");
+  ctx.beginPath(); ctx.moveTo(points[0].x,pad.top+plotH); points.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.lineTo(points[points.length-1].x,pad.top+plotH); ctx.closePath(); ctx.fillStyle=gradient; ctx.fill();
+  ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.strokeStyle="#5de1e6"; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
+  if (points.length === 1) { ctx.beginPath(); ctx.arc(points[0].x, points[0].y, 4, 0, Math.PI*2); ctx.fillStyle="#5de1e6"; ctx.fill(); }
+}
+
+async function openTankHistory(button) {
+  historyModal.hidden = false; document.body.classList.add("history-open");
+  document.getElementById("history-title").textContent = button.dataset.tankName;
+  document.getElementById("history-subtitle").textContent = "Volume nas últimas 48 horas";
+  historyEmpty.hidden = true; historySummary.textContent = "A carregar…";
+  try {
+    const response = await fetch(`/api/tanks/${encodeURIComponent(button.dataset.tankId)}/history`);
+    if (!response.ok) throw new Error("history_request_failed");
+    const data = await response.json(), samples = data.samples || [];
+    currentHistory = {samples, capacity: data.capacity_m3};
+    historyEmpty.hidden = samples.length > 0;
+    const latest = samples[samples.length-1];
+    historySummary.textContent = latest ? `Atual: ${latest.volume_m3} m³ · ${samples.length} leituras` : "Sem dados";
+    requestAnimationFrame(() => drawHistoryChart(samples, data.capacity_m3));
+  } catch (_) {
+    historySummary.textContent = "Erro ao carregar"; historyEmpty.hidden = false; historyEmpty.textContent = "Não foi possível carregar o histórico.";
+  }
+}
+
+document.querySelectorAll(".history-button").forEach(button => button.addEventListener("click", () => openTankHistory(button)));
+document.querySelectorAll("[data-history-close]").forEach(button => button.addEventListener("click", () => { historyModal.hidden=true; currentHistory=null; document.body.classList.remove("history-open"); }));
+document.addEventListener("keydown", event => { if (event.key === "Escape" && !historyModal.hidden) { historyModal.hidden=true; currentHistory=null; document.body.classList.remove("history-open"); } });
+window.addEventListener("resize", () => { if (!historyModal.hidden && currentHistory) drawHistoryChart(currentHistory.samples, currentHistory.capacity); });
+
 function formatDateTime(isoString) {
   if (!isoString || isoString === "-") return "-";
 

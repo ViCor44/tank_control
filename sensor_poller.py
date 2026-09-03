@@ -19,6 +19,7 @@ from services.tank_service import (
 from services.control_service import apply_tank_level_relays, apply_source_relays
 from services.alarm_service import build_tank_alarms
 from services.alarm_history_service import record_alarm_transitions
+from services.tank_history_service import record_tank_volumes
 
 
 logger = logging.getLogger(__name__)
@@ -226,6 +227,10 @@ def update_tank_states():
     state["alarms"] = current_alarms
     state["state_last_updated"] = now_iso()
     save_state_preserving_sensor_resets(state, loaded_reset_tokens)
+    try:
+        record_tank_volumes(state.get("tanks", {}))
+    except Exception:
+        logger.exception("Não foi possível guardar o histórico de volumes")
 
 
 def poll_forever():

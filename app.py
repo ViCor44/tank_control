@@ -6,6 +6,7 @@ from uuid import uuid4
 from services.config_service import load_config, load_state, save_config, save_state
 from services.alarm_service import build_tank_alarms
 from services.alarm_history_service import load_alarm_history
+from services.tank_history_service import load_tank_history
 from sensor_poller import start_background_poller
 from services.relay_inventory import (
     get_available_relay_options,
@@ -321,7 +322,7 @@ def create_app():
     app.secret_key = get_session_secret()
     app.config.update(SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE="Lax")
 
-    public_endpoints = {"index", "api_state", "login", "master_login", "alarm_history", "static"}
+    public_endpoints = {"index", "api_state", "api_tank_history", "login", "master_login", "alarm_history", "static"}
     master_endpoints = {"security_users", "security_user_add", "security_user_update", "security_master_pin", "security_history"}
 
     @app.before_request
@@ -471,6 +472,20 @@ def create_app():
     @app.route("/api/state")
     def api_state():
         return jsonify(build_dashboard_data())
+
+    @app.route("/api/tanks/<tank_id>/history")
+    def api_tank_history(tank_id):
+        config = load_config()
+        tank = get_tank_by_id(config.get("tanks", []), tank_id)
+        if tank is None:
+            return jsonify({"error": "Tanque não encontrado"}), 404
+        return jsonify({
+            "tank_id": tank_id,
+            "tank_name": tank.get("name", tank_id),
+            "capacity_m3": round(float(tank.get("capacity_liters", 0)) / 1000, 2),
+            "hours": 48,
+            "samples": load_tank_history(tank_id, hours=48),
+        })
 
     @app.route("/tanks")
     def tanks_page():

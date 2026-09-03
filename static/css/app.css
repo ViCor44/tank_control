@@ -1254,3 +1254,19 @@ select {
   min-width: 180px;
 }
 
+.history-button { margin-top: 10px; width: 100%; }
+.history-modal[hidden] { display: none; }
+.history-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; }
+.history-modal-backdrop { position: absolute; inset: 0; background: rgba(3, 10, 19, .78); backdrop-filter: blur(3px); }
+.history-dialog { position: relative; width: min(920px, 96vw); margin: 0; box-shadow: 0 24px 80px rgba(0,0,0,.48); }
+.history-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.history-header h3 { margin: 0; }
+.history-header p { color: var(--muted); margin: 5px 0 0; }
+.history-close { border: 0; background: transparent; color: var(--text); font-size: 34px; line-height: 1; cursor: pointer; }
+.history-chart-wrap { height: min(420px, 52vh); margin-top: 18px; }
+.history-chart-wrap canvas { width: 100%; height: 100%; display: block; }
+.history-legend { display: flex; justify-content: space-between; gap: 18px; color: var(--muted); font-size: 13px; margin-top: 8px; }
+.history-legend i { display: inline-block; width: 22px; height: 3px; margin: 0 7px 3px 0; background: #5de1e6; }
+.history-empty { text-align: center; color: var(--muted); }
+body.history-open { overflow: hidden; }
+@media (max-width: 700px) { .history-modal { padding: 8px; } .history-dialog { width: 100%; } .history-chart-wrap { height: 330px; } .history-legend { flex-direction: column; } }
