@@ -43,7 +43,7 @@
         <p><strong>ID:</strong> {{ tank.id }}</p>
         <p><strong>Capacidade:</strong> {{ tank.capacity_m3 }} m³</p>
         <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> m³</p>
-        <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
+        <p><strong>Distância atual:</strong> <span class="measurement-nowrap"><span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</span></p>
         <p><strong>Distância vazio:</strong> {{ tank.calibration.distance_empty_cm if tank.calibration else '-' }} cm</p>
         <p><strong>Distância cheio:</strong> {{ tank.calibration.distance_full_cm if tank.calibration else '-' }} cm</p>
         <p><strong>Sensor:</strong> {{ tank.sensor.type }}</p>

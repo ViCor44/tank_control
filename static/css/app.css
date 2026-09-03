@@ -1255,6 +1255,7 @@ select {
 }
 
 .history-button { margin-top: 10px; width: 100%; }
+.measurement-nowrap { white-space: nowrap; }
 .history-modal[hidden] { display: none; }
 .history-modal { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; }
 .history-modal-backdrop { position: absolute; inset: 0; background: rgba(3, 10, 19, .78); backdrop-filter: blur(3px); }
