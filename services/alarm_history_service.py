@@ -8,6 +8,11 @@ HISTORY_PATH = Path(__file__).resolve().parent.parent / "config" / "alarm_histor
 _lock = threading.RLock()
 MAX_EVENTS = 500
 
+
+def _is_loggable_alarm(alarm):
+    """A full tank is an operating state, not an error worth auditing."""
+    return not str(alarm.get("alarm_id") or alarm.get("id") or "").endswith("_full")
+
 def load_alarm_history():
     with _lock:
         if not HISTORY_PATH.exists():
@@ -17,11 +22,12 @@ def load_alarm_history():
                 entries = json.load(handle)
         except (OSError, json.JSONDecodeError):
             return []
-    return list(reversed(entries[-MAX_EVENTS:]))
+    visible_entries = [entry for entry in entries if _is_loggable_alarm(entry)]
+    return list(reversed(visible_entries[-MAX_EVENTS:]))
 
 def record_alarm_transitions(previous_alarms, current_alarms, state):
-    previous = {alarm.get("id"): alarm for alarm in previous_alarms or [] if alarm.get("id")}
-    current = {alarm.get("id"): alarm for alarm in current_alarms or [] if alarm.get("id")}
+    previous = {alarm.get("id"): alarm for alarm in previous_alarms or [] if alarm.get("id") and _is_loggable_alarm(alarm)}
+    current = {alarm.get("id"): alarm for alarm in current_alarms or [] if alarm.get("id") and _is_loggable_alarm(alarm)}
     timestamp = datetime.now(timezone.utc).isoformat()
     events = []
     for alarm_id, alarm in current.items():
