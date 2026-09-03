@@ -537,10 +537,15 @@ select {
   flex: 1;
 }
 
-.tank-percent {
+.tank-primary-reading {
   font-size: 26px;
   font-weight: bold;
   margin-bottom: 8px;
+}
+
+.tank-primary-reading small {
+  color: var(--muted);
+  font-size: 0.65em;
 }
 
 .alarm-list {

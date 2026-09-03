@@ -84,9 +84,9 @@
           <div class="tank-fill status-{{ tank.status }}" id="tank-fill-{{ tank.id }}" style="height: {{ tank.level_percent if tank.level_percent is not none else 0 }}%;"></div>
         </div>
         <div class="tank-meta">
-          <div class="tank-percent" id="tank-percent-{{ tank.id }}">{{ (tank.level_percent ~ '%') if tank.level_percent is not none else '-' }}</div>
+          <div class="tank-primary-reading"><span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> <small>m³</small></div>
           <p><strong>ID:</strong> {{ tank.id }}</p>
-          <p><strong>Volume atual:</strong> <span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3 if tank.volume_m3 is not none else '-' }}</span> m³</p>
+          <p><strong>Nível atual:</strong> <span id="tank-percent-{{ tank.id }}">{{ (tank.level_percent ~ '%') if tank.level_percent is not none else '-' }}</span></p>
           <p><strong>Distância atual:</strong> <span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</p>
           <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
           <p><strong>Atualizado:</strong> <span id="tank-last-update-{{ tank.id }}">{{ tank.last_update or "-" }}</span></p>
