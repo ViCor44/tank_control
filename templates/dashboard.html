@@ -87,7 +87,7 @@
           <div class="tank-primary-reading"><span id="tank-volume-{{ tank.id }}">{{ tank.volume_m3|round|int if tank.volume_m3 is not none else '-' }}</span> <small>m³</small></div>
           <p><strong>ID:</strong> {{ tank.id }}</p>
           <p><strong>Nível atual:</strong> <span id="tank-percent-{{ tank.id }}">{{ (tank.level_percent ~ '%') if tank.level_percent is not none else '-' }}</span></p>
-          <p><strong>Distância atual:</strong> <span class="measurement-nowrap"><span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm if tank.distance_cm is not none else '-' }}</span> cm</span></p>
+          <p><strong>Distância atual:</strong> <span class="measurement-nowrap"><span id="tank-distance-{{ tank.id }}">{{ tank.distance_cm | round(0, 'common') | int if tank.distance_cm is not none else '-' }}</span> cm</span></p>
           <p><strong>Sensor online:</strong> <span id="tank-sensor-ok-{{ tank.id }}">{{ "Sim" if tank.sensor_ok else "Não" }}</span></p>
           <p><strong>Atualizado:</strong> <span id="tank-last-update-{{ tank.id }}">{{ tank.last_update or "-" }}</span></p>
           <button type="button" class="action-button history-button" data-tank-id="{{ tank.id }}" data-tank-name="{{ tank.name }}">Gráfico 48h</button>
@@ -284,7 +284,7 @@ function updateDashboard(data) {
 
     if (percentEl) percentEl.textContent = tank.level_percent == null ? "-" : `${tank.level_percent}%`;
     if (volumeEl) volumeEl.textContent = tank.volume_m3 == null ? "-" : Math.round(tank.volume_m3);
-    if (distanceEl) distanceEl.textContent = tank.distance_cm ?? "-";
+    if (distanceEl) distanceEl.textContent = tank.distance_cm == null ? "-" : Math.round(tank.distance_cm);
     if (sensorOkEl) sensorOkEl.textContent = tank.sensor_ok ? "Sim" : "Não";
     if (statusEl) updateBadgeStatus(statusEl, tank.status);
     if (fillEl) updateTankFill(fillEl, tank.status, tank.level_percent);
