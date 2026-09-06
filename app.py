@@ -15,6 +15,7 @@ from services.relay_inventory import (
     get_relay_count,
     get_relay_assignments,
 )
+from services.relay_service import build_relay_board_service
 from services.security_service import append_audit, find_active_user, find_user_by_pin, get_session_secret, hash_pin, load_audit, load_security, pin_in_use, save_security, verify_master_pin
 
 
@@ -293,6 +294,15 @@ def _validate_route_relay(config, route):
     if relay in used:
         return f"Relé {relay} já está em uso"
     return None
+
+
+def _turn_off_relay(config, relay_number):
+    if relay_number <= 0:
+        return None
+    result = build_relay_board_service(config).relay_off(relay_number)
+    if result.get("ok"):
+        return None
+    return result.get("error") or f"Não foi possível desligar o relé {relay_number}"
 
 
 def _normalized_boards_list(config):
@@ -1107,6 +1117,12 @@ def create_app():
             return "Route not found", 404
 
         if action == "remove":
+            old_relay = int(route.get("valve_relay", 0) or 0)
+            route["enabled"] = False
+            save_config(config)
+            relay_error = _turn_off_relay(config, old_relay)
+            if relay_error:
+                return f"Rota desativada, mas não foi possível remover: {relay_error}", 502
             routes.remove(route)
 
         elif action == "toggle":
@@ -1117,10 +1133,24 @@ def create_app():
                 new_relay = int(request.form.get("valve_relay", 0) or 0)
             except ValueError:
                 return "Relé inválido", 400
+            old_relay = int(route.get("valve_relay", 0) or 0)
+            was_enabled = route.get("enabled", True)
             route["valve_relay"] = new_relay
             relay_error = _validate_route_relay(config, route)
             if relay_error:
+                route["valve_relay"] = old_relay
                 return relay_error, 400
+            route["valve_relay"] = old_relay
+
+            if old_relay != new_relay:
+                route["enabled"] = False
+                save_config(config)
+                relay_error = _turn_off_relay(config, old_relay)
+                if relay_error:
+                    return f"Rota desativada, mas não foi possível alterar: {relay_error}", 502
+
+            route["valve_relay"] = new_relay
+            route["enabled"] = was_enabled
 
         else:
             return "Unknown action", 400
