@@ -50,14 +50,18 @@ def record_tank_volumes(tank_states, timestamp=None):
     with _history_lock:
         data = _load_unlocked()
         histories = data.setdefault("tanks", {})
-        active_ids = set(tank_states)
 
-        for tank_id, tank_state in tank_states.items():
-            samples = histories.setdefault(tank_id, [])
+        for tank_id in list(histories):
+            samples = histories[tank_id]
             samples[:] = [
                 item for item in samples
                 if (_parse_timestamp(item.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff
             ]
+            if not samples and tank_id not in tank_states:
+                histories.pop(tank_id, None)
+
+        for tank_id, tank_state in tank_states.items():
+            samples = histories.setdefault(tank_id, [])
             volume = tank_state.get("volume_liters")
             if not tank_state.get("sensor_ok") or not tank_state.get("sensor_reading_valid") or volume is None:
                 continue
@@ -66,10 +70,6 @@ def record_tank_volumes(tank_states, timestamp=None):
                 samples[-1] = sample
             else:
                 samples.append(sample)
-
-        for tank_id in list(histories):
-            if tank_id not in active_ids:
-                histories.pop(tank_id, None)
         _save_unlocked(data)
 
 
