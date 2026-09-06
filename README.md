@@ -12,6 +12,20 @@ O leitor de sensores arranca automaticamente em segundo plano. Não é necessár
 executar `sensor_poller.py` separadamente. Isto também se aplica ao arranque por
 `flask run` ou através de um servidor WSGI.
 
+## Modo quiosque no Raspberry Pi
+
+No Raspberry Pi OS Desktop, execute como o utilizador da sessão gráfica, sem
+`sudo`:
+
+```bash
+sudo raspi-config nonint do_boot_behaviour B4
+bash ./scripts/install_kiosk.sh http://191.188.127.31:5000
+```
+
+O primeiro comando ativa o login automático no ambiente gráfico. O instalador
+configura o Chromium para abrir o painel em modo quiosque após cada login.
+Reinicie o Pi com `sudo reboot` para testar.
+
 ## Primeiro acesso
 
 O Dashboard é público. As restantes áreas pedem o PIN de um utilizador. A roda
