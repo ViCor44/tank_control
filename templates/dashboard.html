@@ -139,29 +139,31 @@ function drawHistoryChart(samples, capacity, selectedIndex = null) {
   const plotW = width - pad.left - pad.right, plotH = height - pad.top - pad.bottom;
   ctx.clearRect(0, 0, width, height);
   ctx.font = "12px system-ui"; ctx.lineWidth = 1;
+  const styles = getComputedStyle(document.documentElement);
+  const color = name => styles.getPropertyValue(name).trim();
   const end = Date.now(), start = end - 48 * 3600 * 1000;
   const maxValue = Math.max(capacity || 0, ...samples.map(item => Number(item.volume_m3) || 0), 1);
   for (let i = 0; i <= 4; i++) {
     const y = pad.top + plotH * i / 4;
-    ctx.strokeStyle = "rgba(148, 170, 195, .22)"; ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width-pad.right, y); ctx.stroke();
-    ctx.fillStyle = "#a9bacd"; ctx.textAlign = "right"; ctx.fillText(`${Math.round(maxValue*(4-i)/4)} m³`, pad.left-8, y+4);
+    ctx.strokeStyle = color("--chart-grid"); ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(width-pad.right, y); ctx.stroke();
+    ctx.fillStyle = color("--chart-label"); ctx.textAlign = "right"; ctx.fillText(`${Math.round(maxValue*(4-i)/4)} m³`, pad.left-8, y+4);
   }
   for (let i = 0; i <= 4; i++) {
     const x = pad.left + plotW * i / 4, when = new Date(start + (end-start)*i/4);
-    ctx.fillStyle = "#a9bacd"; ctx.textAlign = i === 0 ? "left" : i === 4 ? "right" : "center";
+    ctx.fillStyle = color("--chart-label"); ctx.textAlign = i === 0 ? "left" : i === 4 ? "right" : "center";
     ctx.fillText(when.toLocaleDateString("pt-PT", {day:"2-digit",month:"2-digit"}) + " " + when.toLocaleTimeString("pt-PT", {hour:"2-digit",minute:"2-digit"}), x, height-12);
   }
   const points = samples.map((item, sampleIndex) => ({x: pad.left + (new Date(item.timestamp).getTime()-start)/(end-start)*plotW, y: pad.top + plotH-(Number(item.volume_m3)/maxValue)*plotH, item, sampleIndex})).filter(p => Number.isFinite(p.x) && Number.isFinite(p.y));
   if (currentHistory) currentHistory.points = points;
   if (!points.length) return;
-  const gradient = ctx.createLinearGradient(0,pad.top,0,pad.top+plotH); gradient.addColorStop(0,"rgba(42,167,255,.42)"); gradient.addColorStop(1,"rgba(42,167,255,.03)");
+  const gradient = ctx.createLinearGradient(0,pad.top,0,pad.top+plotH); gradient.addColorStop(0,color("--chart-fill-top")); gradient.addColorStop(1,color("--chart-fill-bottom"));
   ctx.beginPath(); ctx.moveTo(points[0].x,pad.top+plotH); points.forEach(p=>ctx.lineTo(p.x,p.y)); ctx.lineTo(points[points.length-1].x,pad.top+plotH); ctx.closePath(); ctx.fillStyle=gradient; ctx.fill();
-  ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.strokeStyle="#5de1e6"; ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
-  if (points.length === 1) { ctx.beginPath(); ctx.arc(points[0].x, points[0].y, 4, 0, Math.PI*2); ctx.fillStyle="#5de1e6"; ctx.fill(); }
+  ctx.beginPath(); points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)); ctx.strokeStyle=color("--chart-line"); ctx.lineWidth=2.5; ctx.lineJoin="round"; ctx.stroke();
+  if (points.length === 1) { ctx.beginPath(); ctx.arc(points[0].x, points[0].y, 4, 0, Math.PI*2); ctx.fillStyle=color("--chart-line"); ctx.fill(); }
   const selected = points.find(point => point.sampleIndex === selectedIndex);
   if (selected) {
-    ctx.beginPath(); ctx.moveTo(selected.x, pad.top); ctx.lineTo(selected.x, pad.top + plotH); ctx.strokeStyle="rgba(255,255,255,.32)"; ctx.lineWidth=1; ctx.stroke();
-    ctx.beginPath(); ctx.arc(selected.x, selected.y, 5, 0, Math.PI*2); ctx.fillStyle="#0b1220"; ctx.fill(); ctx.strokeStyle="#ffffff"; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(selected.x, pad.top); ctx.lineTo(selected.x, pad.top + plotH); ctx.strokeStyle=color("--chart-guide"); ctx.lineWidth=1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(selected.x, selected.y, 5, 0, Math.PI*2); ctx.fillStyle=color("--chart-point"); ctx.fill(); ctx.strokeStyle=color("--chart-point-ring"); ctx.lineWidth=2; ctx.stroke();
   }
 }
 
@@ -219,6 +221,7 @@ document.querySelectorAll(".history-button").forEach(button => button.addEventLi
 document.querySelectorAll("[data-history-close]").forEach(button => button.addEventListener("click", () => { historyModal.hidden=true; historyTooltip.hidden=true; currentHistory=null; document.body.classList.remove("history-open"); }));
 document.addEventListener("keydown", event => { if (event.key === "Escape" && !historyModal.hidden) { historyModal.hidden=true; currentHistory=null; document.body.classList.remove("history-open"); } });
 window.addEventListener("resize", () => { if (!historyModal.hidden && currentHistory) drawHistoryChart(currentHistory.samples, currentHistory.capacity); });
+window.addEventListener("themechange", () => { if (!historyModal.hidden && currentHistory) drawHistoryChart(currentHistory.samples, currentHistory.capacity, currentHistory.selectedIndex); });
 
 function formatDateTime(isoString) {
   if (!isoString || isoString === "-") return "-";
