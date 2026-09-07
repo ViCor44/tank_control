@@ -51,6 +51,13 @@ def format_sensor_error(error):
     return "Não foi possível obter a leitura do sensor."
 
 
+def is_spurious_auth_audit(entry):
+    return (
+        entry.get("action") == "alterou"
+        and entry.get("target") in {"/login", "/master-login", "/logout"}
+    )
+
+
 def enrich_tanks(tanks, tank_states):
     enriched = []
 
@@ -359,7 +366,15 @@ def create_app():
 
     @app.after_request
     def audit_request(response):
-        if response.status_code < 400 and g.get("audit_actor") and request.endpoint:
+        explicitly_audited = {
+            "login",
+            "master_login",
+            "logout",
+            "security_user_add",
+            "security_user_update",
+            "security_master_pin",
+        }
+        if response.status_code < 400 and g.get("audit_actor") and request.endpoint not in explicitly_audited:
             page_access = request.method == "GET" and request.endpoint not in {"api_state", "static"}
             action_request = request.method in {"POST", "PUT", "PATCH", "DELETE"}
             if page_access or action_request:
@@ -464,7 +479,8 @@ def create_app():
 
     @app.route("/security/history")
     def security_history():
-        return render_template("security_history.html", entries=load_audit())
+        entries = [entry for entry in load_audit() if not is_spurious_auth_audit(entry)]
+        return render_template("security_history.html", entries=entries)
 
     @app.route("/security/alarm-history")
     def alarm_history():

@@ -2,5 +2,16 @@
 {% block title %}Histórico de segurança{% endblock %}
 {% block content %}
 <div class="page-header"><div><h2>Histórico</h2><p class="muted">Últimos 500 acessos e alterações</p></div><a class="button secondary" href="{{ url_for('security_users') }}">Utilizadores</a></div>
-<section class="panel"><div class="table-wrap"><table><thead><tr><th>Data/hora (UTC)</th><th>Utilizador</th><th>Ação</th><th>Área / objeto</th><th>Detalhe</th><th>IP</th></tr></thead><tbody>{% for entry in entries %}<tr><td>{{ entry.timestamp[:19].replace('T', ' ') }}</td><td>{{ entry.actor }}</td><td>{{ entry.action }}</td><td>{{ entry.target }}</td><td>{{ entry.detail or '—' }}</td><td>{{ entry.ip or '—' }}</td></tr>{% else %}<tr><td colspan="6">Sem registos.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel"><div class="table-wrap"><table><thead><tr><th>Data/hora (Portugal)</th><th>Utilizador</th><th>Ação</th><th>Área / objeto</th><th>Detalhe</th><th>IP</th></tr></thead><tbody>{% for entry in entries %}<tr><td><time class="local-datetime" datetime="{{ entry.timestamp }}">{{ entry.timestamp[:19].replace('T', ' ') }}</time></td><td>{{ entry.actor }}</td><td>{{ entry.action }}</td><td>{{ entry.target }}</td><td>{{ entry.detail or '—' }}</td><td>{{ entry.ip or '—' }}</td></tr>{% else %}<tr><td colspan="6">Sem registos.</td></tr>{% endfor %}</tbody></table></div></section>
+<script>
+const dateTimeFormatter = new Intl.DateTimeFormat("pt-PT", {
+	year: "numeric", month: "2-digit", day: "2-digit",
+	hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
+	timeZone: "Europe/Lisbon"
+});
+document.querySelectorAll(".local-datetime").forEach(element => {
+	const date = new Date(element.dateTime);
+	if (!Number.isNaN(date.getTime())) element.textContent = dateTimeFormatter.format(date);
+});
+</script>
 {% endblock %}
