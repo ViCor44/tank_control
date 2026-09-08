@@ -19,7 +19,30 @@ def calculate_volume_liters(level_percent, capacity_liters):
     return round((level_percent / 100) * capacity_liters, 1)
 
 
-def calculate_tank_status(level_percent, empty_percent, full_percent):
+def calculate_tank_status(
+    level_percent,
+    empty_percent,
+    full_percent,
+    previous_status=None,
+    hysteresis_percent=1.0,
+):
+    hysteresis_percent = max(0.0, float(hysteresis_percent or 0))
+
+    if (
+        previous_status == "critical_low"
+        and level_percent <= empty_percent + hysteresis_percent
+    ):
+        return "critical_low"
+    if (
+        previous_status == "full"
+        and level_percent >= full_percent - hysteresis_percent
+    ):
+        return "full"
+    if previous_status == "low" and level_percent < 30 + hysteresis_percent:
+        if level_percent <= empty_percent:
+            return "critical_low"
+        return "low"
+
     if level_percent <= empty_percent:
         return "critical_low"
     if level_percent >= full_percent:

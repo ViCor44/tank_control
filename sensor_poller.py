@@ -145,7 +145,11 @@ def update_tank_states():
                     status = calculate_tank_status(
                         level_percent,
                         tank["thresholds"]["empty_percent"],
-                        tank["thresholds"]["full_percent"]
+                        tank["thresholds"]["full_percent"],
+                        previous_status=tank_state.get("status"),
+                        hysteresis_percent=system.get(
+                            "alarm_level_hysteresis_percent", 1
+                        ),
                     )
 
                     tank_state.update({
