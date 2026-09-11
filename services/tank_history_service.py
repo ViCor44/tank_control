@@ -39,6 +39,26 @@ def _save_unlocked(data):
     os.replace(temporary_path, HISTORY_PATH)
 
 
+def _samples_with_boundary(samples, cutoff):
+    previous = None
+    recent = []
+    for item in samples:
+        timestamp = _parse_timestamp(item.get("timestamp"))
+        if timestamp is None:
+            continue
+        if timestamp < cutoff:
+            if previous is None or timestamp > previous[0]:
+                previous = (timestamp, item)
+        else:
+            recent.append((timestamp, item))
+
+    recent.sort(key=lambda entry: entry[0])
+    retained = [item for _, item in recent]
+    if previous is not None:
+        retained.insert(0, previous[1])
+    return retained
+
+
 def record_tank_volumes(tank_states, timestamp=None):
     """Store at most one valid volume sample per tank and minute."""
     now = timestamp or datetime.now(timezone.utc)
@@ -53,10 +73,7 @@ def record_tank_volumes(tank_states, timestamp=None):
 
         for tank_id in list(histories):
             samples = histories[tank_id]
-            samples[:] = [
-                item for item in samples
-                if (_parse_timestamp(item.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff
-            ]
+            samples[:] = _samples_with_boundary(samples, cutoff)
             if not samples and tank_id not in tank_states:
                 histories.pop(tank_id, None)
 
@@ -78,4 +95,9 @@ def load_tank_history(tank_id, hours=48):
     cutoff = now - timedelta(hours=max(1, min(int(hours), 48)))
     with _history_lock:
         samples = _load_unlocked().get("tanks", {}).get(tank_id, [])
-    return [item for item in samples if (_parse_timestamp(item.get("timestamp")) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff]
+    window = _samples_with_boundary(samples, cutoff)
+    if window and (_parse_timestamp(window[0].get("timestamp")) or now) < cutoff:
+        if len(window) == 1:
+            return []
+        window[0] = {**window[0], "timestamp": cutoff.isoformat(), "is_boundary": True}
+    return window

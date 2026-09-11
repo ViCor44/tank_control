@@ -207,7 +207,8 @@ async function openTankHistory(button) {
     currentHistory = {samples, capacity: data.capacity_m3};
     historyEmpty.hidden = samples.length > 0;
     const latest = samples[samples.length-1];
-    historySummary.textContent = latest ? `Atual: ${latest.volume_m3} m³ · ${samples.length} leituras` : "Sem dados";
+    const readingCount = samples.filter(sample => !sample.is_boundary).length;
+    historySummary.textContent = latest ? `Atual: ${latest.volume_m3} m³ · ${readingCount} leituras` : "Sem dados";
     requestAnimationFrame(() => drawHistoryChart(samples, data.capacity_m3));
   } catch (_) {
     historySummary.textContent = "Erro ao carregar"; historyEmpty.hidden = false; historyEmpty.textContent = "Não foi possível carregar o histórico.";
