@@ -12,6 +12,11 @@ O leitor de sensores arranca automaticamente em segundo plano. Não é necessár
 executar `sensor_poller.py` separadamente. Isto também se aplica ao arranque por
 `flask run` ou através de um servidor WSGI.
 
+O histórico dos tanques é guardado fora da pasta do projeto, por padrão em
+`~/.local/share/tank_control/tank_history.json`, para sobreviver a atualizações
+e substituições do código. O caminho pode ser alterado com a variável de ambiente
+`TANK_CONTROL_HISTORY_PATH`.
+
 ## Modo quiosque no Raspberry Pi
 
 No Raspberry Pi OS Desktop, execute como o utilizador da sessão gráfica, sem

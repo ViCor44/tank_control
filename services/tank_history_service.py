@@ -6,7 +6,13 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-HISTORY_PATH = BASE_DIR / "config" / "tank_history.json"
+LEGACY_HISTORY_PATH = BASE_DIR / "config" / "tank_history.json"
+HISTORY_PATH = Path(
+    os.environ.get(
+        "TANK_CONTROL_HISTORY_PATH",
+        Path.home() / ".local" / "share" / "tank_control" / "tank_history.json",
+    )
+).expanduser()
 _history_lock = threading.RLock()
 _retention = timedelta(hours=48)
 
@@ -20,10 +26,11 @@ def _parse_timestamp(value):
 
 
 def _load_unlocked():
-    if not HISTORY_PATH.exists():
+    source_path = HISTORY_PATH if HISTORY_PATH.exists() else LEGACY_HISTORY_PATH
+    if not source_path.exists():
         return {"tanks": {}}
     try:
-        with HISTORY_PATH.open("r", encoding="utf-8") as handle:
+        with source_path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
         return data if isinstance(data, dict) else {"tanks": {}}
     except (OSError, json.JSONDecodeError):
@@ -31,6 +38,7 @@ def _load_unlocked():
 
 
 def _save_unlocked(data):
+    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
     temporary_path = HISTORY_PATH.with_suffix(".json.tmp")
     with temporary_path.open("w", encoding="utf-8") as handle:
         json.dump(data, handle, ensure_ascii=False, separators=(",", ":"))
