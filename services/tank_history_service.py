@@ -16,6 +16,7 @@ HISTORY_PATH = Path(
 PER_USER_HISTORY_PATH = Path.home() / ".local" / "share" / "tank_control" / "tank_history.json"
 _history_lock = threading.RLock()
 _retention = timedelta(hours=48)
+_max_samples_per_tank = 7 * 24 * 60
 
 
 def _parse_timestamp(value):
@@ -94,7 +95,6 @@ def record_tank_volumes(tank_states, timestamp=None):
     now = timestamp or datetime.now(timezone.utc)
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
-    cutoff = now - _retention
     minute_key = now.strftime("%Y-%m-%dT%H:%M")
 
     with _history_lock:
@@ -103,7 +103,6 @@ def record_tank_volumes(tank_states, timestamp=None):
 
         for tank_id in list(histories):
             samples = histories[tank_id]
-            samples[:] = _samples_with_boundary(samples, cutoff)
             if not samples and tank_id not in tank_states:
                 histories.pop(tank_id, None)
 
@@ -117,6 +116,9 @@ def record_tank_volumes(tank_states, timestamp=None):
                 samples[-1] = sample
             else:
                 samples.append(sample)
+            samples.sort(key=lambda item: _parse_timestamp(item.get("timestamp")))
+            if len(samples) > _max_samples_per_tank:
+                samples[:] = samples[-_max_samples_per_tank:]
         _save_unlocked(data)
 
 
