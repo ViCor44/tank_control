@@ -10,9 +10,10 @@ LEGACY_HISTORY_PATH = BASE_DIR / "config" / "tank_history.json"
 HISTORY_PATH = Path(
     os.environ.get(
         "TANK_CONTROL_HISTORY_PATH",
-        Path.home() / ".local" / "share" / "tank_control" / "tank_history.json",
+        LEGACY_HISTORY_PATH,
     )
 ).expanduser()
+PER_USER_HISTORY_PATH = Path.home() / ".local" / "share" / "tank_control" / "tank_history.json"
 _history_lock = threading.RLock()
 _retention = timedelta(hours=48)
 
@@ -26,15 +27,36 @@ def _parse_timestamp(value):
 
 
 def _load_unlocked():
-    source_path = HISTORY_PATH if HISTORY_PATH.exists() else LEGACY_HISTORY_PATH
-    if not source_path.exists():
-        return {"tanks": {}}
-    try:
-        with source_path.open("r", encoding="utf-8") as handle:
-            data = json.load(handle)
-        return data if isinstance(data, dict) else {"tanks": {}}
-    except (OSError, json.JSONDecodeError):
-        return {"tanks": {}}
+    data = {"tanks": {}}
+    source_paths = dict.fromkeys((PER_USER_HISTORY_PATH, LEGACY_HISTORY_PATH, HISTORY_PATH))
+    for source_path in source_paths:
+        if not source_path.exists():
+            continue
+        try:
+            with source_path.open("r", encoding="utf-8") as handle:
+                source_data = json.load(handle)
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(source_data, dict):
+            continue
+        source_tanks = source_data.get("tanks", {})
+        if not isinstance(source_tanks, dict):
+            continue
+        for tank_id, samples in source_tanks.items():
+            if isinstance(samples, list):
+                data["tanks"].setdefault(tank_id, []).extend(samples)
+
+    for samples in data["tanks"].values():
+        unique_samples = {
+            item.get("timestamp"): item
+            for item in samples
+            if isinstance(item, dict) and _parse_timestamp(item.get("timestamp")) is not None
+        }
+        samples[:] = sorted(
+            unique_samples.values(),
+            key=lambda item: _parse_timestamp(item.get("timestamp")),
+        )
+    return data
 
 
 def _save_unlocked(data):
