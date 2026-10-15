@@ -33,19 +33,23 @@ def _load_unlocked():
     for source_path in source_paths:
         if not source_path.exists():
             continue
-        try:
-            with source_path.open("r", encoding="utf-8") as handle:
-                source_data = json.load(handle)
-        except (OSError, json.JSONDecodeError):
-            continue
+        with source_path.open("r", encoding="utf-8") as handle:
+            source_data = json.load(handle)
         if not isinstance(source_data, dict):
-            continue
-        source_tanks = source_data.get("tanks", {})
+            raise ValueError(f"Histórico de tanques inválido: {source_path}")
+        source_tanks = source_data.get("tanks")
         if not isinstance(source_tanks, dict):
-            continue
+            raise ValueError(f"Histórico de tanques inválido: {source_path}")
         for tank_id, samples in source_tanks.items():
-            if isinstance(samples, list):
-                data["tanks"].setdefault(tank_id, []).extend(samples)
+            if not isinstance(samples, list) or any(
+                not isinstance(item, dict)
+                or _parse_timestamp(item.get("timestamp")) is None
+                for item in samples
+            ):
+                raise ValueError(
+                    f"Registos inválidos no histórico do tanque {tank_id}: {source_path}"
+                )
+            data["tanks"].setdefault(tank_id, []).extend(samples)
 
     for samples in data["tanks"].values():
         unique_samples = {
@@ -85,7 +89,7 @@ def _samples_with_boundary(samples, cutoff):
 
     recent.sort(key=lambda entry: entry[0])
     retained = [item for _, item in recent]
-    if previous is not None:
+    if previous is not None and (not recent or recent[0][0] > cutoff):
         retained.insert(0, previous[1])
     return retained
 
@@ -127,6 +131,7 @@ def load_tank_history(tank_id, hours=48):
     cutoff = now - timedelta(hours=max(1, min(int(hours), 48)))
     with _history_lock:
         samples = _load_unlocked().get("tanks", {}).get(tank_id, [])
+    samples = [item for item in samples if _parse_timestamp(item.get("timestamp")) <= now]
     window = _samples_with_boundary(samples, cutoff)
     if window and (_parse_timestamp(window[0].get("timestamp")) or now) < cutoff:
         if len(window) == 1:

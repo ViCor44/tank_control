@@ -19,6 +19,14 @@ Os registos criados anteriormente em
 Para guardar o histórico fora da pasta do projeto, defina um caminho absoluto e
 estável na variável de ambiente `TANK_CONTROL_HISTORY_PATH` no serviço de arranque.
 
+O gráfico usa uma janela móvel de 48 horas: cada novo ponto entra à direita e os
+pontos com mais de 48 horas deixam de ser apresentados, sem reiniciar o histórico.
+É guardado no máximo um registo válido por minuto. O ficheiro mantém até 10 080
+registos por tanque (sete dias com leituras contínuas), como margem de segurança.
+Se um ficheiro de histórico existente não puder ser lido ou tiver um formato
+inválido, a gravação é interrompida e o erro é registado no log da aplicação,
+em vez de substituir os dados por um histórico novo.
+
 ## Modo quiosque no Raspberry Pi
 
 No Raspberry Pi OS Desktop, execute como o utilizador da sessão gráfica, sem
