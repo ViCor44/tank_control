@@ -27,6 +27,27 @@ Se um ficheiro de histórico existente não puder ser lido ou tiver um formato
 inválido, a gravação é interrompida e o erro é registado no log da aplicação,
 em vez de substituir os dados por um histórico novo.
 
+## Condição opcional de alimentação por destino
+
+Em **Regras**, cada destino de uma fonte pode ter uma condição independente:
+**Só encher se o tanque escolhido tiver água > X%**. Por exemplo, no destino
+tanque 6, escolher o tanque 5 e indicar 80 permite encher o tanque 6 apenas
+enquanto o tanque 5 estiver acima de 80%. Os limites e a prioridade do tanque
+destino continuam a aplicar-se.
+
+Por defeito não existe condição: as sequências atuais mantêm o comportamento.
+Para remover uma condição, escolha **Sem condição** e guarde. A condição de um
+destino não altera as condições dos outros destinos nem de outras fontes.
+
+A condição é verificada em cada ciclo de leitura. Aos 80% exatos (no exemplo),
+abaixo desse valor, ou se o tanque de origem estiver desativado, não existir ou
+tiver uma leitura inválida/offline, o destino fica impedido. Se estiver a receber
+água, o relé da fonte desliga sem esperar pelo tempo de paragem, mantendo o atraso
+de fecho da válvula para uma paragem segura. Depois pode ser escolhido outro
+destino permitido. Ao recuperar a condição, o destino volta a ser elegível.
+Eliminar o tanque de origem não remove automaticamente a condição: o destino
+permanece impedido até a condição ser corrigida ou removida explicitamente.
+
 ## Modo quiosque no Raspberry Pi
 
 No Raspberry Pi OS Desktop, execute como o utilizador da sessão gráfica, sem

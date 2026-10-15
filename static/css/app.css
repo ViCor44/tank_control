@@ -959,6 +959,22 @@ select {
   font-size: 12px;
 }
 
+.sequence-step-supply {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sequence-step-supply select,
+.sequence-step-supply input {
+  width: 100%;
+  min-width: 0;
+}
+
 .sequence-step-threshold input[type="number"] {
   width: 100%;
   background: var(--panel);

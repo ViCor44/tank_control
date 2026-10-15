@@ -21,6 +21,10 @@
     estiver abaixo) e <strong>Parar em ≥ Y%</strong> (para de servir quando atingir Y%). Deixando
     os dois iguais funcionam como um teto simples. Exemplo: rede pública com
     <em>arrancar se &lt; 10%</em> e <em>parar em ≥ 30%</em> só ajuda em caso crítico.
+    A condição de alimentação é opcional e específica de cada destino: a fonte só
+    pode servir esse destino enquanto o tanque escolhido tiver água acima do
+    limite indicado. Se atingir o limite ou a leitura ficar inválida, a fonte para
+    antes de procurar outro destino permitido.
   </p>
 
   <div class="sequence-list">
@@ -54,6 +58,8 @@
                 <span class="badge badge-status-blocked">Bloqueada por {{ source.blocked_by_name }}</span>
               {% elif source.target_reason == 'sensor_offline' %}
                 <span class="badge badge-status-critical_low">Fail-safe — sensor(es) offline: {{ source.skipped_offline_tank_names|join(', ') }}</span>
+              {% elif source.target_reason == 'supply_condition' %}
+                <span class="badge badge-status-low">Condição de alimentação não cumprida</span>
               {% elif source.target_reason == 'no_route' %}
                 <span class="badge badge-status-no_route">Sem rota</span>
               {% elif source.target_reason == 'all_full' %}
@@ -119,6 +125,9 @@
                     {% if step.tank_exists and step.enabled and not step.sensor_ok %}
                       <span class="badge badge-status-critical_low" style="margin-left: 6px;" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>
                     {% endif %}
+                    {% if step.enabled and not step.supply_condition_met %}
+                      <span class="badge badge-status-low">alimentação indisponível</span>
+                    {% endif %}
                   </span>
                 </div>
                 <div class="sequence-step-meta">
@@ -179,6 +188,27 @@
               <span>%</span>
 
               <button type="submit" class="icon-button threshold-save" title="Guardar limites">💾</button>
+            </form>
+            <form method="post" action="{{ url_for('rules_source_action', source_id=source.id) }}" class="sequence-step-supply">
+              <input type="hidden" name="action" value="set_step_supply_condition">
+              <input type="hidden" name="index" value="{{ loop.index0 }}">
+              <label for="supply-tank-{{ source.id }}-{{ loop.index0 }}">Só encher se o tanque</label>
+              <select id="supply-tank-{{ source.id }}-{{ loop.index0 }}" name="supply_tank_id">
+                <option value="">Sem condição</option>
+                {% for tank in available_tanks if tank.id != step.tank_id %}
+                <option value="{{ tank.id }}" {% if step.supply_condition and step.supply_condition.tank_id == tank.id %}selected{% endif %}>{{ tank.name }} ({{ tank.id }})</option>
+                {% endfor %}
+                {% if step.supply_condition and step.supply_condition.tank_id not in available_tanks|map(attribute='id')|list %}
+                <option value="{{ step.supply_condition.tank_id }}" selected>{{ step.supply_condition.tank_id }} (não existe)</option>
+                {% endif %}
+              </select>
+              <label for="supply-percent-{{ source.id }}-{{ loop.index0 }}">tiver água &gt; (%)</label>
+              <input id="supply-percent-{{ source.id }}-{{ loop.index0 }}" name="supply_above_percent"
+                     type="number" min="0" max="100" step="any"
+                     {% if step.supply_condition %}required{% else %}disabled{% endif %}
+                     value="{{ step.supply_condition.above_percent if step.supply_condition else '' }}">
+              <small>Opcional. Para remover, escolha «Sem condição» e guarde.</small>
+              <button type="submit" class="action-button action-button-small">Guardar condição</button>
             </form>
             </div>
           </div>
@@ -241,6 +271,16 @@
 </div>
 
 <script>
+document.querySelectorAll(".sequence-step-supply").forEach(form => {
+  const tankSelect = form.elements.namedItem("supply_tank_id");
+  const percentInput = form.elements.namedItem("supply_above_percent");
+  tankSelect.addEventListener("change", () => {
+    const enabled = tankSelect.value !== "";
+    percentInput.disabled = !enabled;
+    percentInput.required = enabled;
+  });
+});
+
 function buildSourceRuntimeBadge(source) {
   const transition = buildRouteTransitionBadge(source.route_transition);
   if (transition) return transition;
@@ -262,6 +302,9 @@ function buildSourceRuntimeBadge(source) {
     const skipped = source.skipped_offline_tank_names || [];
     const list = skipped.length > 0 ? skipped.join(", ") : "";
     return `<span class="badge badge-status-critical_low">Fail-safe — sensor(es) offline${list ? ": " + list : ""}</span>`;
+  }
+  if (source.target_reason === "supply_condition") {
+    return `<span class="badge badge-status-low">Condição de alimentação não cumprida</span>`;
   }
   if (source.target_reason === "no_route") {
     return `<span class="badge badge-status-no_route">Sem rota</span>`;
@@ -298,7 +341,7 @@ function updateRouteTransitionCountdowns() {
   });
 }
 
-function buildStepBadge(isCurrent, isTarget, sensorOffline) {
+function buildStepBadge(isCurrent, isTarget, sensorOffline, supplyBlocked) {
   const parts = [];
   if (isCurrent) {
     parts.push(`<span class="badge badge-filling" style="margin-left: 6px;"><span class="pulse-dot"></span> a encher</span>`);
@@ -307,6 +350,9 @@ function buildStepBadge(isCurrent, isTarget, sensorOffline) {
   }
   if (sensorOffline) {
     parts.push(`<span class="badge badge-status-critical_low" style="margin-left: 6px;" title="Sensor offline — leituras acima são o último valor conhecido. A fonte não serve este tanque enquanto o sensor não recuperar.">sensor offline</span>`);
+  }
+  if (supplyBlocked) {
+    parts.push(`<span class="badge badge-status-low">alimentação indisponível</span>`);
   }
   return parts.join("");
 }
@@ -339,7 +385,8 @@ function updateRulesRuntime(data) {
       if (badgeEl) {
         const tankId = el.dataset.tankId;
         const sensorOffline = tankId ? sensorOkByTankId[tankId] === false : false;
-        badgeEl.innerHTML = buildStepBadge(isCurrent, isTarget, sensorOffline);
+        const supplyBlocked = (source.supply_blocked_step_indexes || []).includes(idx);
+        badgeEl.innerHTML = buildStepBadge(isCurrent, isTarget, sensorOffline, supplyBlocked);
       }
     });
   });

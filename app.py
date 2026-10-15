@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash, g
 
 from datetime import datetime, timezone
+import math
 from uuid import uuid4
 
 from services.config_service import load_config, load_state, save_config, save_state
@@ -8,6 +9,7 @@ from services.alarm_service import build_tank_alarms
 from services.alarm_history_service import load_alarm_history
 from services.tank_history_service import load_tank_history
 from sensor_poller import start_background_poller
+from services.control_service import step_supply_condition_met
 from services.relay_inventory import (
     get_available_relay_options,
     get_used_relays,
@@ -120,6 +122,7 @@ def enrich_sources(sources, source_states, tanks=None):
             "blocked_by_name": source_name_by_id.get(blocked_by_id) if blocked_by_id else None,
             "skipped_offline_tank_ids": skipped_ids,
             "skipped_offline_tank_names": skipped_names,
+            "supply_blocked_step_indexes": state.get("supply_blocked_step_indexes", []),
             "route_transition": state.get("route_transition"),
             "last_update": state.get("last_update")
         })
@@ -596,6 +599,13 @@ def create_app():
             if relay_error:
                 return relay_error, 400
 
+            if tank["id"] != original_id:
+                for source in config.get("sources", []):
+                    for step in source.get("sequence", []):
+                        condition = step.get("supply_condition")
+                        if condition and condition.get("tank_id") == original_id:
+                            condition["tank_id"] = tank["id"]
+
             save_config(config)
             return redirect(url_for("tanks_page"))
 
@@ -877,6 +887,8 @@ def create_app():
                     "level_percent": tank_state.get("level_percent") if sensor_ok else None,
                     "status": tank_state.get("status", "unknown") if sensor_ok else "unknown",
                     "sensor_ok": sensor_ok,
+                    "supply_condition": step.get("supply_condition"),
+                    "supply_condition_met": step_supply_condition_met(config, state, step),
                     "has_route": has_route,
                     "is_current": (current_step_index == step_index) and source_active,
                     "is_target": (current_step_index == step_index) and not source_active,
@@ -907,6 +919,7 @@ def create_app():
                 "route_transition": src_state.get("route_transition"),
                 "skipped_offline_tank_ids": skipped_offline_ids,
                 "skipped_offline_tank_names": skipped_offline_names,
+                "supply_blocked_step_indexes": src_state.get("supply_blocked_step_indexes", []),
             })
 
         return render_template(
@@ -1011,6 +1024,31 @@ def create_app():
             sequence[index]["stop_at_percent"] = stop_val
             # Drop the legacy single-field so the new pair is the source of truth.
             sequence[index].pop("trigger_below_percent", None)
+
+        elif action == "set_step_supply_condition":
+            index = _parse_index(request.form.get("index"), len(sequence))
+            if index is None:
+                return "Invalid index", 400
+            supply_tank_id = request.form.get("supply_tank_id", "").strip()
+            raw_percent = request.form.get("supply_above_percent", "").strip()
+            if not supply_tank_id and not raw_percent:
+                sequence[index].pop("supply_condition", None)
+            else:
+                supply_tank = get_tank_by_id(config.get("tanks", []), supply_tank_id)
+                if supply_tank is None:
+                    return "Escolha um tanque de alimentação existente", 400
+                if supply_tank_id == sequence[index]["tank_id"]:
+                    return "O tanque de alimentação tem de ser diferente do destino", 400
+                try:
+                    minimum = float(raw_percent)
+                except ValueError:
+                    return "Indique uma percentagem de alimentação válida", 400
+                if not math.isfinite(minimum) or not 0 <= minimum <= 100:
+                    return "A percentagem de alimentação tem de estar entre 0 e 100", 400
+                sequence[index]["supply_condition"] = {
+                    "tank_id": supply_tank_id,
+                    "above_percent": minimum,
+                }
 
         elif action == "update_settings":
             source["repeat_sequence"] = request.form.get("repeat_sequence") == "on"

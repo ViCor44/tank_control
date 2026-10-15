@@ -1,6 +1,11 @@
+import logging
+import math
 from datetime import datetime, timedelta, timezone
 
 from services.relay_service import build_relay_board_service
+
+
+logger = logging.getLogger(__name__)
 
 
 def now_iso():
@@ -57,6 +62,36 @@ def _source_delay(source, key, default):
     return float(value)
 
 
+def step_supply_condition_met(config, state, step):
+    condition = step.get("supply_condition")
+    if condition is None:
+        return True
+    if not isinstance(condition, dict):
+        logger.error("Condição de alimentação inválida: %r", condition)
+        return False
+    tank = _tank_by_id(config, condition.get("tank_id"))
+    try:
+        minimum = float(condition["above_percent"])
+    except (KeyError, TypeError, ValueError):
+        logger.error("Limite de alimentação inválido: %r", condition)
+        return False
+    if not math.isfinite(minimum) or not 0 <= minimum <= 100:
+        logger.error("Limite de alimentação fora do intervalo: %r", condition)
+        return False
+    if tank is None or not tank.get("enabled", False):
+        return False
+    tank_state = state.get("tanks", {}).get(tank["id"], {})
+    if not tank_state.get("sensor_ok") or not tank_state.get("sensor_reading_valid", False):
+        return False
+    level = tank_state.get("level_percent")
+    return (
+        isinstance(level, (int, float))
+        and math.isfinite(level)
+        and 0 <= level <= 100
+        and level > minimum
+    )
+
+
 def compute_source_targets(config, state):
     """Decide, per source, which sequence step should be active now.
 
@@ -66,7 +101,7 @@ def compute_source_targets(config, state):
       - current_step_index
       - current_route_relay: valve relay for the selected route (or 0)
       - desired_active: True if a target was found and enabled_relay > 0
-      - target_reason: short string ("target"|"all_full"|"no_step"|"disabled"|"no_route"|"blocked")
+      - target_reason: selection or rejection reason, including "supply_condition"
     """
     rules = config.get("rules", {})
     skip_full = bool(rules.get("skip_full_tanks", True))
@@ -101,6 +136,7 @@ def compute_source_targets(config, state):
         source_state["target_reason"] = "idle"
         source_state["blocked_by"] = None
         source_state["skipped_offline_tank_ids"] = []
+        source_state["supply_blocked_step_indexes"] = []
 
         if not source.get("enabled", False):
             source_state["target_reason"] = "disabled"
@@ -113,12 +149,25 @@ def compute_source_targets(config, state):
         full_tanks = 0
         last_reject_reason = None  # (reason, blocked_by) for UI feedback when nothing eligible
         skipped_offline = []  # tank_ids in this source's sequence whose sensor is offline
+        supply_safety_stop = False
 
         for idx, step in enumerate(sequence):
             if not step.get("enabled", True):
                 continue
 
             tank_id = step.get("tank_id")
+            if not step_supply_condition_met(config, state, step):
+                source_state["supply_blocked_step_indexes"].append(idx)
+                last_reject_reason = ("supply_condition", None)
+                physical_relay = source_state.get("physical_route_relay", 0)
+                route = route_lookup.get((source_id, tank_id), {})
+                if (
+                    physical_relay and route.get("valve_relay") == physical_relay
+                ) or (
+                    source_state.get("active") and previous_target == tank_id
+                ):
+                    supply_safety_stop = True
+                continue
             tank = _tank_by_id(config, tank_id)
             if tank is None:
                 continue
@@ -206,6 +255,12 @@ def compute_source_targets(config, state):
                 "level_percent": sort_level,
                 "was_serving": was_serving_this,
             })
+
+        # Stop the pump before switching away from a path whose supply is unsafe.
+        if supply_safety_stop:
+            source_state["target_reason"] = "supply_condition"
+            source_state["skipped_offline_tank_ids"] = skipped_offline
+            continue
 
         if not candidates:
             if skip_full and considered_tanks > 0 and full_tanks == considered_tanks:
@@ -451,7 +506,9 @@ def apply_source_relays(config, state):
             # selected path can no longer be operated safely.
             safety_stop = (
                 not desired_active
-                and source_state.get("target_reason") in ("all_full", "sensor_offline", "no_route")
+                and source_state.get("target_reason") in (
+                    "all_full", "sensor_offline", "no_route", "supply_condition"
+                )
             )
             required = startup_delay if desired_active else (0 if safety_stop else stop_delay)
 
@@ -574,6 +631,8 @@ def apply_source_relays(config, state):
             source_state["status"] = "sensor_offline"
         elif reason == "all_full":
             source_state["status"] = "all_full"
+        elif reason == "supply_condition":
+            source_state["status"] = "supply_condition"
         elif reason in ("no_step", "idle"):
             source_state["status"] = "idle"
         else:
